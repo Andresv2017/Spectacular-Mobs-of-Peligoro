@@ -2,6 +2,9 @@ package net.darkblade.smopmod;
 
 import com.mojang.logging.LogUtils;
 
+import net.darkblade.smopmod.entity.ModEntities;
+import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
+import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -33,6 +36,8 @@ public class SMOP
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
 
+        ModEntities.register(modEventBus);
+
         // Register the item to a creative tab
         modEventBus.addListener(this::addCreative);
 
@@ -60,6 +65,7 @@ public class SMOP
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event)
         {
+            EntityRenderers.register(ModEntities.HELL_HIPPO.get(), Hell_HippoRenderer::new);
         }
     }
 }
