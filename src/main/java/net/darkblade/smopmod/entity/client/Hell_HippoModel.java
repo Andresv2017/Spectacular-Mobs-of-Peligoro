@@ -150,6 +150,7 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 
 		this.animateWalk(ModAnimationDefinitions.Hell_HippoModelAnimation.walk, limbSwing, limbSwingAmount, 2f, 2.5f);
 		this.animate(((Hell_HippoEntity) entity).idleAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.idle, ageInTicks, 1f);
+		this.animate(((Hell_HippoEntity) entity).attackAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.attack, ageInTicks, 1f);
 	}
 
 	private void applyHeadRotation(float pNetHeadYaw, float pHeadPitch, float pAgeInTicks) {
