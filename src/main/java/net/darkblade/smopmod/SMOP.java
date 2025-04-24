@@ -4,6 +4,8 @@ import com.mojang.logging.LogUtils;
 
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
+import net.darkblade.smopmod.item.ModCreativeModTabs;
+import net.darkblade.smopmod.item.ModItems;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
@@ -21,24 +23,24 @@ import org.slf4j.Logger;
 @Mod(SMOP.MOD_ID)
 public class SMOP
 {
-    // Define mod id in a common place for everything to reference
     public static final String MOD_ID = "smop";
-    // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public SMOP(FMLJavaModLoadingContext context)
     {
         IEventBus modEventBus = context.getModEventBus();
 
-        // Register the commonSetup method for modloading
+        ModCreativeModTabs.register(modEventBus);
+        ModItems.register(modEventBus);
+
         modEventBus.addListener(this::commonSetup);
 
-        // Register ourselves for server and other game events we are interested in
+
         MinecraftForge.EVENT_BUS.register(this);
 
         ModEntities.register(modEventBus);
 
-        // Register the item to a creative tab
+
         modEventBus.addListener(this::addCreative);
 
     }

@@ -2,6 +2,7 @@ package net.darkblade.smopmod.entity.custom;
 
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.ai.Hell_HippoAttackGoal;
+import net.darkblade.smopmod.item.ModItems;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -17,10 +18,12 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Predicate;
@@ -122,7 +125,7 @@ public class Hell_HippoEntity extends Animal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createLivingAttributes()
-                .add(Attributes.MAX_HEALTH,2000)
+                .add(Attributes.MAX_HEALTH,20.0)
                 .add(Attributes.FOLLOW_RANGE,24D)
                 .add(Attributes.MOVEMENT_SPEED, 0.250)
                 .add(Attributes.ARMOR_TOUGHNESS, 0.1f)
@@ -156,5 +159,8 @@ public class Hell_HippoEntity extends Animal {
         return SoundEvents.HOGLIN_DEATH;
     }
 
-
+    @Override
+    protected void dropCustomDeathLoot(DamageSource pSource, int pLooting, boolean pRecentlyHit) {
+        super.dropCustomDeathLoot(pSource, pLooting, pRecentlyHit);
+    }
 }
