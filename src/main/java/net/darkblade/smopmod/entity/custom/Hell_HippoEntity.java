@@ -320,16 +320,17 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return this.steering.hasSaddle();
     }
 
-    static {
-        DATA_SADDLE_ID = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
-        DATA_BOOST_TIME = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.INT);
-        FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.POTATO, Items.BEETROOT});
-    }
-
     @Override
     public double getPassengersRidingOffset() {
         return this.getBbHeight() * 0.75D + 0.4D;
     }
+
+    static {
+        DATA_SADDLE_ID = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+        DATA_BOOST_TIME = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.INT);
+        FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.BEEF});
+    }
+
 
 
 }
