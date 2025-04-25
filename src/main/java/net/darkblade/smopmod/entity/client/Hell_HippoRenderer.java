@@ -6,7 +6,6 @@ import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_HippoModel<Hell_HippoEntity>> {
@@ -17,6 +16,9 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
 
     @Override
     public ResourceLocation getTextureLocation(Hell_HippoEntity hellHippoEntity) {
+        if(hellHippoEntity.isSaddled()){
+            return new ResourceLocation(SMOP.MOD_ID, "textures/entity/male_hell_hippo_saddle.png");
+        }
         return new ResourceLocation(SMOP.MOD_ID, "textures/entity/male_hell_hippo.png");
     }
 

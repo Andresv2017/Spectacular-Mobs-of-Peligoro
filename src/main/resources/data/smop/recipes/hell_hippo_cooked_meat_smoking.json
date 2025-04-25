@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smoking",
+  "ingredient": {
+    "item": "smop:hell_hippo_raw_meat"
+  },
+  "result": "smop:hell_hippo_cooked_meat",
+  "experience": 0.35,
+  "cookingtime": 200
+}

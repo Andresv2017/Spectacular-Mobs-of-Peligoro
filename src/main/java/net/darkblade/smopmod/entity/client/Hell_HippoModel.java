@@ -110,7 +110,9 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		.texOffs(26, 129).mirror().addBox(-5.0F, 6.0F, -11.0F, 2.0F, 3.0F, 2.0F, new CubeDeformation(0.0F)).mirror(false)
 		.texOffs(26, 129).addBox(3.0F, 6.0F, -11.0F, 2.0F, 3.0F, 2.0F, new CubeDeformation(0.0F)), PartPose.offset(-0.5F, -2.0F, -9.0F));
 
-		PartDefinition torso = body.addOrReplaceChild("torso", CubeListBuilder.create().texOffs(0, 0).addBox(-11.0F, -10.0F, -16.0F, 22.0F, 20.0F, 24.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -7.0F, -22.0F));
+		PartDefinition torso = body.addOrReplaceChild("torso", CubeListBuilder.create().texOffs(0, 0).addBox(-11.0F, -10.0F, -16.0F, 22.0F, 20.0F, 24.0F, new CubeDeformation(0.0F))
+				.texOffs(0, 140).addBox(-11.0F, -10.0F, -12.0F, 22.0F, 20.0F, 19.0F, new CubeDeformation(0.2F))
+				.texOffs(0, 183).addBox(-7.0F, -12.0F, -7.0F, 14.0F, 2.0F, 2.0F, new CubeDeformation(0.2F)), PartPose.offset(0.0F, -7.0F, -22.0F));
 
 		PartDefinition tail = body.addOrReplaceChild("tail", CubeListBuilder.create().texOffs(94, 125).addBox(-2.0F, 0.0F, -0.5F, 4.0F, 11.0F, 3.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -11.0F, 5.0F));
 

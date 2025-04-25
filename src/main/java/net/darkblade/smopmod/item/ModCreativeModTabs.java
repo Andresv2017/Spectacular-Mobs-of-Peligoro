@@ -14,10 +14,11 @@ public class ModCreativeModTabs {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, SMOP.MOD_ID);
 
     public static final RegistryObject<CreativeModeTab> SMOP_TAB = CREATIVE_MODE_TABS.register("smop_tab",
-            () -> CreativeModeTab.builder().icon(() -> new ItemStack(ModItems.HELL_HIPPO_MEAT.get()))
+            () -> CreativeModeTab.builder().icon(() -> new ItemStack(ModItems.HELL_HIPPO_COOKED_MEAT.get()))
                     .title(Component.translatable("creativetab.smop_tab"))
                     .displayItems((pParameters, pOutput) -> {
-                        pOutput.accept(ModItems.HELL_HIPPO_MEAT.get());
+                        pOutput.accept(ModItems.HELL_HIPPO_COOKED_MEAT.get());
+                        pOutput.accept(ModItems.HELL_HIPPO_RAW_MEAT.get());
 
 
                     })
