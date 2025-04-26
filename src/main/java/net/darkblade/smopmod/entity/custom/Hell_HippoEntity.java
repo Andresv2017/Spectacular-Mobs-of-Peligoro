@@ -6,6 +6,7 @@ import net.darkblade.smopmod.entity.ai.Hell_HippoAttackGoal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -23,7 +24,6 @@ import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.ItemStack;
@@ -35,14 +35,17 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.UUID;
 import java.util.function.Predicate;
 
 public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleable {
 
     private static final EntityDataAccessor<Boolean> DATA_SADDLE_ID;
     private static final EntityDataAccessor<Integer> DATA_BOOST_TIME;
+    private static final EntityDataAccessor<Boolean> DATA_TRUSTING;
     private static final Ingredient FOOD_ITEMS;
     private final ItemBasedSteering steering;
+    private UUID trustingPlayerUUID;
 
     private static final EntityDataAccessor<Boolean> ATTACKING =
             SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
@@ -107,17 +110,26 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return this.entityData.get(ATTACKING);
     }
 
+    public boolean isTrusting() {
+        return this.entityData.get(DATA_TRUSTING);
+    }
+
+    public void setTrusting(boolean trusting) {
+        this.entityData.set(DATA_TRUSTING, trusting);
+    }
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(ATTACKING, false);
         this.entityData.define(DATA_SADDLE_ID, false);
         this.entityData.define(DATA_BOOST_TIME, 0);
+        this.entityData.define(DATA_TRUSTING, false);
     }
 
     public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
         EntityType<?> entitytype = p_289448_.getType();
-        return entitytype == EntityType.SHEEP || entitytype == EntityType.GOAT || entitytype == EntityType.COW || entitytype == EntityType.PLAYER;
+        return entitytype == EntityType.SHEEP || entitytype == EntityType.GOAT || entitytype == EntityType.COW;
     };
 
 
@@ -138,7 +150,8 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.goalSelector.addGoal(6,new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Animal.class, false, PREY_SELECTOR));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Animal.class, false, PREY_SELECTOR));
 
     }
 
@@ -178,25 +191,52 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public void addAdditionalSaveData(CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
         this.steering.addAdditionalSaveData(pCompound);
+        pCompound.putBoolean("Trusting", this.isTrusting());
+        if (this.trustingPlayerUUID != null) {
+            pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
+        }
     }
 
     public void readAdditionalSaveData(CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.steering.readAdditionalSaveData(pCompound);
+        if (pCompound.contains("Trusting")) {
+            this.setTrusting(pCompound.getBoolean("Trusting"));
+        }
+        if (pCompound.hasUUID("TrustingPlayerUUID")) {
+            this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
+        }
     }
 
     public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
-        boolean flag = this.isFood(pPlayer.getItemInHand(pHand));
-        if (!flag && this.isSaddled() && !this.isVehicle() && !pPlayer.isSecondaryUseActive()) {
+        ItemStack itemstack = pPlayer.getItemInHand(pHand);
+        if (this.isFood(itemstack)) {
+            if (!this.level().isClientSide) {
+                this.usePlayerItem(pPlayer, pHand, itemstack);
+                if (!this.isTrusting()) { // Solo si NO confía
+                    if (this.random.nextInt(3) == 0) {
+                        this.setTrusting(true);
+                        this.trustingPlayerUUID = pPlayer.getUUID();
+                        this.level().broadcastEntityEvent(this, (byte)41);
+                        pPlayer.displayClientMessage(Component.literal("§aHell Hippo now trusts you" + pPlayer.getName().getString()), true);
+                    } else {
+                        this.level().broadcastEntityEvent(this, (byte)40);
+                        pPlayer.displayClientMessage(Component.literal("§cHell Hippo remains cautious..."), true);
+                    }
+                } else {
+                    pPlayer.displayClientMessage(Component.literal("§bHell Hippo already trusts you!"), true);
+                }
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+        if (!this.isFood(itemstack) && this.isSaddled() && !this.isVehicle() && !pPlayer.isSecondaryUseActive()) {
             if (!this.level().isClientSide) {
                 pPlayer.startRiding(this);
             }
-
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         } else {
             InteractionResult interactionresult = super.mobInteract(pPlayer, pHand);
             if (!interactionresult.consumesAction()) {
-                ItemStack itemstack = pPlayer.getItemInHand(pHand);
                 return itemstack.is(Items.SADDLE) ? itemstack.interactLivingEntity(pPlayer, this, pHand) : InteractionResult.PASS;
             } else {
                 return interactionresult;
@@ -328,6 +368,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     static {
         DATA_SADDLE_ID = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_BOOST_TIME = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.INT);
+        DATA_TRUSTING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.BEEF});
     }
 
