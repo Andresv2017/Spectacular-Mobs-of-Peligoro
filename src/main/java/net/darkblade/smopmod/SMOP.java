@@ -6,6 +6,7 @@ import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
 import net.darkblade.smopmod.item.ModItems;
+import net.darkblade.smopmod.packet.RiderActionPacket;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
@@ -32,6 +33,7 @@ public class SMOP
 
         ModCreativeModTabs.register(modEventBus);
         ModItems.register(modEventBus);
+        RiderActionPacket.ModMessages.register();
 
         modEventBus.addListener(this::commonSetup);
 

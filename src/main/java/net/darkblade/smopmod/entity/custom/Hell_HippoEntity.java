@@ -39,6 +39,9 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -486,6 +489,68 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     @Override
     public double getPassengersRidingOffset() {
         return this.getBbHeight() * 0.75D + 0.4D;
+    }
+
+    public void performMountedAttack(Player player) {
+        LivingEntity target = this.findNearestAttackableTarget();
+        if (target != null) {
+            this.swing(InteractionHand.MAIN_HAND);
+            target.hurt(this.damageSources().mobAttack(this), (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
+            player.displayClientMessage(Component.literal("\u00a76Hell Hippo attacks!"), true);
+        } else {
+            this.playSound(SoundEvents.HOGLIN_ANGRY, 1.0F, 1.0F);
+            player.displayClientMessage(Component.literal("\u00a7cNo target found to attack."), true);
+        }
+    }
+
+    private LivingEntity findNearestAttackableTarget() {
+        double range = 2.0D;
+        Vec3 forward = this.getLookAngle().normalize();
+        Vec3 start = this.getEyePosition();
+        Vec3 end = start.add(forward.scale(range));
+
+        AABB searchBox = new AABB(start, end).inflate(0.5);
+
+        List<LivingEntity> candidates = this.level().getEntitiesOfClass(LivingEntity.class, searchBox,
+                (entity) -> entity.isAlive()
+                        && !(entity instanceof Hell_HippoEntity)
+                        && this.hasLineOfSight(entity)
+        );
+
+        return candidates.stream()
+                .min((e1, e2) -> Double.compare(this.distanceToSqr(e1), this.distanceToSqr(e2)))
+                .orElse(null);
+    }
+
+    public void performFearEffect(Player player) {
+        double range = 10.0D;
+        Vec3 pos = this.position();
+        List<LivingEntity> entities = this.level().getEntitiesOfClass(LivingEntity.class,
+                new AABB(pos.x - range, pos.y - 2, pos.z - range, pos.x + range, pos.y + 2, pos.z + range),
+                (entity) -> entity.isAlive() && !(entity instanceof Hell_HippoEntity)
+                        && entity != player
+                        && !(entity instanceof TamableAnimal tamable && tamable.isOwnedBy(player))
+        );
+
+        for (LivingEntity entity : entities) {
+            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
+            entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+        }
+
+        player.displayClientMessage(Component.literal("\u00a79Hell Hippo unleashes FEAR!"), true);
+    }
+
+    @Mod.EventBusSubscriber
+    public static class ModEvents {
+
+        @SubscribeEvent
+        public static void onEntityAttack(LivingAttackEvent event) {
+            if (event.getSource().getEntity() instanceof Hell_HippoEntity hippo) {
+                if (hippo.isVehicle() && event.getEntity() == hippo.getFirstPassenger()) {
+                    event.setCanceled(true);
+                }
+            }
+        }
     }
 
     static {
