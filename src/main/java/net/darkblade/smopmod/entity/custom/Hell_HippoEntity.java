@@ -28,9 +28,11 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ThrownPotion;
 import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
@@ -38,6 +40,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -47,6 +50,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Integer> DATA_BOOST_TIME;
     private static final EntityDataAccessor<Boolean> DATA_TRUSTING;
     private static final EntityDataAccessor<Boolean> DATA_INTIMIDATING;
+    private static final EntityDataAccessor<Boolean> DATA_SLEEPING;
     private static final Ingredient FOOD_ITEMS;
     private final ItemBasedSteering steering;
     private UUID trustingPlayerUUID;
@@ -69,9 +73,15 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public void tick() {
         super.tick();
 
+        if (this.isSleeping()) {
+            this.setDeltaMovement(Vec3.ZERO);
+            return;
+        }
+
         if(this.level().isClientSide()){
             setupAnimationStates();
         }
+
         if (!this.level().isClientSide && this.isTrusting() && !this.isSaddled() && this.trustingPlayerUUID != null) {
             Player player = this.level().getPlayerByUUID(this.trustingPlayerUUID);
             if (player != null) {
@@ -153,6 +163,14 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.set(DATA_INTIMIDATING, intimidating);
     }
 
+    public boolean isSleeping() {
+        return this.entityData.get(DATA_SLEEPING);
+    }
+
+    public void setSleeping(boolean sleeping) {
+        this.entityData.set(DATA_SLEEPING, sleeping);
+    }
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
@@ -161,6 +179,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.define(DATA_BOOST_TIME, 0);
         this.entityData.define(DATA_TRUSTING, false);
         this.entityData.define(DATA_INTIMIDATING, false);
+        this.entityData.define(DATA_SLEEPING, false);
     }
 
     public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
@@ -231,6 +250,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.steering.addAdditionalSaveData(pCompound);
         pCompound.putBoolean("Trusting", this.isTrusting());
         pCompound.putBoolean("Intimidating", this.isIntimidating());
+        pCompound.putBoolean("Sleeping", this.isSleeping());
         if (this.trustingPlayerUUID != null) {
             pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
         }
@@ -245,10 +265,27 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (pCompound.contains("Intimidating")) {
             this.setIntimidating(pCompound.getBoolean("Intimidating"));
         }
+        if (pCompound.contains("Sleeping")) {
+            this.setSleeping(pCompound.getBoolean("Sleeping"));
+        }
         if (pCompound.hasUUID("TrustingPlayerUUID")) {
             this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
         }
     }
+
+    @Override
+    public boolean addEffect(MobEffectInstance effectInstance, @Nullable Entity source) {
+        if (!this.level().isClientSide && effectInstance.getEffect() == MobEffects.WEAKNESS) {
+            if (this.isIntimidating() && !this.isSleeping()) {
+                this.setSleeping(true);
+                if (source instanceof Player player) {
+                    player.displayClientMessage(Component.literal("§9Hell Hippo falls asleep... Zzz..."), true);
+                }
+            }
+        }
+        return super.addEffect(effectInstance, source);
+    }
+
 
     public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
         ItemStack itemstack = pPlayer.getItemInHand(pHand);
@@ -413,6 +450,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         DATA_BOOST_TIME = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.INT);
         DATA_TRUSTING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_INTIMIDATING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+        DATA_SLEEPING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.BEEF});
     }
 }
