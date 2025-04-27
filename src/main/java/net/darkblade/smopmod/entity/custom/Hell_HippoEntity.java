@@ -12,10 +12,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -44,6 +47,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -62,6 +66,15 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Boolean> ATTACKING =
             SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private final ServerBossEvent fearCooldownBossBar = new ServerBossEvent(
+            Component.literal("Fear Cooldown"),
+            BossEvent.BossBarColor.BLUE,
+            BossEvent.BossBarOverlay.PROGRESS
+    );
+
+    private int fearCooldownTicks = 0;
+    private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
+
     public Hell_HippoEntity(EntityType<? extends Animal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
         this.steering = new ItemBasedSteering(this.entityData, DATA_BOOST_TIME, DATA_SADDLE_ID);
@@ -77,12 +90,33 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public void tick() {
         super.tick();
 
+        if (!this.level().isClientSide) {
+            if (fearCooldownTicks > 0) {
+                fearCooldownTicks--;
+                fearCooldownBossBar.setProgress(Math.max(0.0F, (float) fearCooldownTicks / 300F));
+            }
+
+            ServerPlayer rider = this.getRiderPlayer();
+
+            // Primero, quitar todos los que no deberían ver la barra
+            for (ServerPlayer player : new ArrayList<>(fearCooldownBossBar.getPlayers())) {
+                if (player != rider) {
+                    fearCooldownBossBar.removePlayer(player);
+                }
+            }
+
+            // Luego, asegurarse que el rider actual sí la vea
+            if (rider != null && !fearCooldownBossBar.getPlayers().contains(rider)) {
+                fearCooldownBossBar.addPlayer(rider);
+            }
+        }
+
         if (this.isSleeping()) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
         }
 
-        if(this.level().isClientSide()){
+        if(this.level().isClientSide()) {
             setupAnimationStates();
         }
 
@@ -417,7 +451,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (this.isSaddled()) {
             this.spawnAtLocation(Items.SADDLE);
         }
-
     }
 
     @Override
@@ -491,6 +524,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return this.getBbHeight() * 0.75D + 0.4D;
     }
 
+
     public void performMountedAttack(Player player) {
         LivingEntity target = this.findNearestAttackableTarget();
         if (target != null) {
@@ -523,11 +557,17 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     }
 
     public void performFearEffect(Player player) {
+        if (this.isFearOnCooldown()) {
+            // No mostrar mensaje ya que la BossBar indica el cooldown
+            return;
+        }
+
         double range = 10.0D;
         Vec3 pos = this.position();
         List<LivingEntity> entities = this.level().getEntitiesOfClass(LivingEntity.class,
                 new AABB(pos.x - range, pos.y - 2, pos.z - range, pos.x + range, pos.y + 2, pos.z + range),
-                (entity) -> entity.isAlive() && !(entity instanceof Hell_HippoEntity)
+                (entity) -> entity.isAlive()
+                        && !(entity instanceof Hell_HippoEntity)
                         && entity != player
                         && !(entity instanceof TamableAnimal tamable && tamable.isOwnedBy(player))
         );
@@ -537,7 +577,38 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
         }
 
-        player.displayClientMessage(Component.literal("\u00a79Hell Hippo unleashes FEAR!"), true);
+        player.displayClientMessage(Component.literal("§9Hell Hippo unleashes FEAR!"), true);
+
+        this.triggerFearCooldown();
+    }
+
+    public void triggerFearCooldown() {
+        if (!this.level().isClientSide) {
+            fearCooldownTicks = FEAR_COOLDOWN_DURATION;
+            fearCooldownBossBar.setProgress(1.0f);
+            fearCooldownBossBar.setVisible(true);
+        }
+    }
+
+    public boolean isFearOnCooldown() {
+        return fearCooldownTicks > 0;
+    }
+
+    public void startSeenBy(ServerPlayer player) {
+        this.fearCooldownBossBar.addPlayer(player);
+    }
+
+    public void stopSeenBy(ServerPlayer player) {
+        this.fearCooldownBossBar.removePlayer(player);
+    }
+
+    @Nullable
+    private ServerPlayer getRiderPlayer() {
+        Entity passenger = this.getFirstPassenger();
+        if (passenger instanceof ServerPlayer serverPlayer) {
+            return serverPlayer;
+        }
+        return null;
     }
 
     @Mod.EventBusSubscriber
