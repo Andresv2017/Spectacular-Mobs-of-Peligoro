@@ -3,6 +3,7 @@ package net.darkblade.smopmod.entity.custom;
 import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.ai.Hell_HippoAttackGoal;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -17,6 +18,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -43,6 +46,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Boolean> DATA_SADDLE_ID;
     private static final EntityDataAccessor<Integer> DATA_BOOST_TIME;
     private static final EntityDataAccessor<Boolean> DATA_TRUSTING;
+    private static final EntityDataAccessor<Boolean> DATA_INTIMIDATING;
     private static final Ingredient FOOD_ITEMS;
     private final ItemBasedSteering steering;
     private UUID trustingPlayerUUID;
@@ -67,6 +71,29 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
         if(this.level().isClientSide()){
             setupAnimationStates();
+        }
+        if (!this.level().isClientSide && this.isTrusting() && !this.isSaddled() && this.trustingPlayerUUID != null) {
+            Player player = this.level().getPlayerByUUID(this.trustingPlayerUUID);
+            if (player != null) {
+                double distance = this.distanceTo(player);
+                if (!this.isIntimidating() && distance < 10.0D && this.hasLineOfSight(player)) {
+                    this.setIntimidating(true);
+                    player.displayClientMessage(Component.literal("§6Hell Hippo is intimidating you!"), true);
+                }
+                if (this.isIntimidating()) {
+                    Vec3 toEntity = this.position().subtract(player.position()).normalize();
+                    double dot = player.getLookAngle().normalize().dot(toEntity);
+                    if (dot > 0.95D) {
+                        if (!player.hasEffect(MobEffects.WEAKNESS)) {
+                            player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 0));
+                        }
+                        if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+                            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 0));
+                        }
+                        player.displayClientMessage(Component.literal("§cYou are terrified by the Hell Hippo!"), true);
+                    }
+                }
+            }
         }
     }
 
@@ -118,6 +145,14 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.set(DATA_TRUSTING, trusting);
     }
 
+    public boolean isIntimidating() {
+        return this.entityData.get(DATA_INTIMIDATING);
+    }
+
+    public void setIntimidating(boolean intimidating) {
+        this.entityData.set(DATA_INTIMIDATING, intimidating);
+    }
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
@@ -125,6 +160,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.define(DATA_SADDLE_ID, false);
         this.entityData.define(DATA_BOOST_TIME, 0);
         this.entityData.define(DATA_TRUSTING, false);
+        this.entityData.define(DATA_INTIMIDATING, false);
     }
 
     public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
@@ -184,7 +220,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (DATA_BOOST_TIME.equals(pKey) && this.level().isClientSide) {
             this.steering.onSynced();
         }
-
+        if (pKey.equals(DATA_INTIMIDATING) && this.level().isClientSide && this.isIntimidating()) {
+            Minecraft.getInstance().player.displayClientMessage(Component.literal("§6Hell Hippo is intimidating you!"), true);
+        }
         super.onSyncedDataUpdated(pKey);
     }
 
@@ -192,6 +230,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         super.addAdditionalSaveData(pCompound);
         this.steering.addAdditionalSaveData(pCompound);
         pCompound.putBoolean("Trusting", this.isTrusting());
+        pCompound.putBoolean("Intimidating", this.isIntimidating());
         if (this.trustingPlayerUUID != null) {
             pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
         }
@@ -202,6 +241,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.steering.readAdditionalSaveData(pCompound);
         if (pCompound.contains("Trusting")) {
             this.setTrusting(pCompound.getBoolean("Trusting"));
+        }
+        if (pCompound.contains("Intimidating")) {
+            this.setIntimidating(pCompound.getBoolean("Intimidating"));
         }
         if (pCompound.hasUUID("TrustingPlayerUUID")) {
             this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
@@ -365,13 +407,12 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return this.getBbHeight() * 0.75D + 0.4D;
     }
 
+
     static {
         DATA_SADDLE_ID = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_BOOST_TIME = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.INT);
         DATA_TRUSTING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+        DATA_INTIMIDATING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.BEEF});
     }
-
-
-
 }
