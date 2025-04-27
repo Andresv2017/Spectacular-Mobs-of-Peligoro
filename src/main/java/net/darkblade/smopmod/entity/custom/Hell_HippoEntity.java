@@ -287,19 +287,39 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     }
 
 
+    @Override
     public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
         ItemStack itemstack = pPlayer.getItemInHand(pHand);
+
+        if (itemstack.is(Items.SADDLE)) {
+            if (!this.level().isClientSide) {
+                if (this.isSleeping() && this.isTrusting() && this.trustingPlayerUUID != null && pPlayer.getUUID().equals(this.trustingPlayerUUID)) {
+                    this.equipSaddle(SoundSource.PLAYERS);
+                    this.setSleeping(false);
+                    if (!pPlayer.getAbilities().instabuild) {
+                        itemstack.shrink(1);
+                    }
+                    pPlayer.displayClientMessage(Component.literal("§6Hell Hippo has been tamed with a Saddle!"), true);
+                    return InteractionResult.SUCCESS;
+                } else {
+                    pPlayer.displayClientMessage(Component.literal("§cYou cannot tame the Hell Hippo yet!"), true);
+                    return InteractionResult.FAIL;
+                }
+            }
+            return InteractionResult.SUCCESS;
+        }
+
         if (this.isFood(itemstack)) {
             if (!this.level().isClientSide) {
                 this.usePlayerItem(pPlayer, pHand, itemstack);
-                if (!this.isTrusting()) { // Solo si NO confía
+                if (!this.isTrusting()) {
                     if (this.random.nextInt(3) == 0) {
                         this.setTrusting(true);
                         this.trustingPlayerUUID = pPlayer.getUUID();
-                        this.level().broadcastEntityEvent(this, (byte)41);
-                        pPlayer.displayClientMessage(Component.literal("§aHell Hippo now trusts you" + pPlayer.getName().getString()), true);
+                        this.level().broadcastEntityEvent(this, (byte) 41);
+                        pPlayer.displayClientMessage(Component.literal("§aHell Hippo now trusts you " + pPlayer.getName().getString()), true);
                     } else {
-                        this.level().broadcastEntityEvent(this, (byte)40);
+                        this.level().broadcastEntityEvent(this, (byte) 40);
                         pPlayer.displayClientMessage(Component.literal("§cHell Hippo remains cautious..."), true);
                     }
                 } else {
@@ -308,20 +328,17 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
-        if (!this.isFood(itemstack) && this.isSaddled() && !this.isVehicle() && !pPlayer.isSecondaryUseActive()) {
-            if (!this.level().isClientSide) {
-                pPlayer.startRiding(this);
-            }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
-        } else {
-            InteractionResult interactionresult = super.mobInteract(pPlayer, pHand);
-            if (!interactionresult.consumesAction()) {
-                return itemstack.is(Items.SADDLE) ? itemstack.interactLivingEntity(pPlayer, this, pHand) : InteractionResult.PASS;
-            } else {
-                return interactionresult;
-            }
+
+        if (!this.level().isClientSide && this.isSaddled() && !this.isVehicle() && !pPlayer.isSecondaryUseActive()) {
+            pPlayer.startRiding(this);
+            return InteractionResult.SUCCESS;
         }
+
+        // Si no es Saddle ni comida, ni montar, recién aquí hacemos super:
+        return super.mobInteract(pPlayer, pHand);
     }
+
+
 
     @Override
     public @Nullable AgeableMob getBreedOffspring(ServerLevel pLevel, AgeableMob ageableMob) {
@@ -362,7 +379,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     @Override
     public boolean isSaddleable() {
-        return this.isAlive() && !this.isBaby();
+        return this.isAlive() && !this.isBaby() && this.isSleeping() && this.isTrusting();
     }
 
     protected void dropEquipment() {
