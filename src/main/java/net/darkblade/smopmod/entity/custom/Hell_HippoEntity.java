@@ -101,7 +101,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                         if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
                             player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 0));
                         }
-                        player.displayClientMessage(Component.literal("§cYou are terrified by the Hell Hippo!"), true);
+                        player.displayClientMessage(Component.literal("§cYou are been terrified by the Hell Hippo!"), true);
                     }
                 }
             }
