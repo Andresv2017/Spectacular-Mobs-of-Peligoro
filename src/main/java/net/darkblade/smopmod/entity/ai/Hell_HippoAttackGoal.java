@@ -20,6 +20,15 @@ public class Hell_HippoAttackGoal extends MeleeAttackGoal {
     }
 
     @Override
+    public boolean canUse() {
+        // Bloquear ataque si está domesticado, saddled y montado
+        if (this.entity.isTrusting() && this.entity.isSaddled() && this.entity.isVehicle()) {
+            return false;
+        }
+        return super.canUse();
+    }
+
+    @Override
     public void start() {
         super.start();
         attackDelay = 7;
@@ -66,7 +75,6 @@ public class Hell_HippoAttackGoal extends MeleeAttackGoal {
     protected int getTicksUntilNextAttack() {
         return this.ticksUntilNextAttack;
     }
-
 
     protected void performAttack(LivingEntity pEnemy) {
         this.resetAttackCooldown();

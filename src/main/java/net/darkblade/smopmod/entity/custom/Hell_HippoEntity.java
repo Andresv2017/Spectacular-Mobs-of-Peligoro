@@ -2,6 +2,7 @@ package net.darkblade.smopmod.entity.custom;
 
 import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.entity.ModEntities;
+import net.darkblade.smopmod.entity.ai.HellHippoDefendOwnerGoal;
 import net.darkblade.smopmod.entity.ai.Hell_HippoAttackGoal;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -53,7 +54,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING;
     private static final Ingredient FOOD_ITEMS;
     private final ItemBasedSteering steering;
-    private UUID trustingPlayerUUID;
+    public UUID trustingPlayerUUID;
 
     private static final EntityDataAccessor<Boolean> ATTACKING =
             SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
@@ -204,6 +205,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.goalSelector.addGoal(5,new LookAtPlayerGoal(this, Player.class, 3f));
         this.goalSelector.addGoal(6,new RandomLookAroundGoal(this));
 
+        this.targetSelector.addGoal(0, new HellHippoDefendOwnerGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Animal.class, false, PREY_SELECTOR));
@@ -286,6 +288,16 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return super.addEffect(effectInstance, source);
     }
 
+    public boolean canAttackTarget(LivingEntity target) {
+        if (this.isSaddled() && this.isTrusting() && this.getFirstPassenger() != null) {
+            return false; // No atacar si está confiado, ensillado y montado
+        }
+        if (this.isVehicle()) {
+            return false; // También no atacar si simplemente está montado
+        }
+        return true;
+    }
+
 
     @Override
     public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
@@ -338,6 +350,21 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return super.mobInteract(pPlayer, pHand);
     }
 
+
+    @Override
+    public boolean canAttack(LivingEntity target) {
+        if (this.isTrusting() && this.trustingPlayerUUID != null) {
+            if (target instanceof Player player) {
+                return !player.getUUID().equals(this.trustingPlayerUUID); // no atacar a su dueño
+            }
+            if (target instanceof TamableAnimal tamable) {
+                if (tamable.isOwnedBy(this.level().getPlayerByUUID(this.trustingPlayerUUID))) {
+                    return false; // no atacar mascotas de su dueño
+                }
+            }
+        }
+        return super.canAttack(target);
+    }
 
 
     @Override
@@ -460,7 +487,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public double getPassengersRidingOffset() {
         return this.getBbHeight() * 0.75D + 0.4D;
     }
-
 
     static {
         DATA_SADDLE_ID = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
