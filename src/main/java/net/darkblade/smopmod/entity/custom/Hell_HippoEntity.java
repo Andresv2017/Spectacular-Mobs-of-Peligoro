@@ -3,6 +3,7 @@ package net.darkblade.smopmod.entity.custom;
 import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.ai.HellHippoDefendOwnerGoal;
+import net.darkblade.smopmod.entity.ai.HellHippoFloatGoal;
 import net.darkblade.smopmod.entity.ai.Hell_HippoAttackGoal;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -66,9 +67,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private final ItemBasedSteering steering;
     private final ServerBossEvent fearCooldownBossBar = new ServerBossEvent( Component.literal("Fear Cooldown"), BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
     public UUID trustingPlayerUUID;
-
-    public final AnimationState idleAnimationState = new AnimationState();
-    public final AnimationState attackAnimationState = new AnimationState();
 
     public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
         EntityType<?> entitytype = p_289448_.getType();
@@ -477,37 +475,80 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     // ───────────────────────────────────────────────────── Animations ─────
 
-    private void setupAnimationStates (){
-
-        if(this.idleAnimationTimeout <= 0) {
-            this.idleAnimationTimeout = this.random.nextInt(40)+80;
-            this.idleAnimationState.start(this.tickCount);
-        } else {
-            --this.idleAnimationTimeout;
-        }
-
-        if(this.isAttacking() && attackAnimationTimeout <= 0) {
-            attackAnimationTimeout = 20; // Length in ticks of your animation
-            attackAnimationState.start(this.tickCount);
-        } else {
-            --this.attackAnimationTimeout;
-        }
-
-        if(!this.isAttacking()) {
-            attackAnimationState.stop();
-        }
+    @Override
+    public double getFluidJumpThreshold() {
+        return 0.2F; // Baja para que no salte tanto el agua
     }
 
     @Override
-    protected void updateWalkAnimation(float pPartialTick) {
-        float f;
-        if(this.getPose() == Pose.STANDING) {
-            f = Math.min(pPartialTick * 6f, 1f);
-        } else {
-            f = 0;
-        }
-        this.walkAnimation.update(f,0.2f);
+    public boolean canBreatheUnderwater() {
+        return true;
     }
+
+    public final AnimationState idleAnimationState = new AnimationState();
+    public final AnimationState attackAnimationState = new AnimationState();
+    public final AnimationState walkAnimationState = new AnimationState();
+    public final AnimationState swimAnimationState = new AnimationState();
+    public final AnimationState sprintAnimationState = new AnimationState();
+    public final AnimationState waterIdleAnimationState = new AnimationState();
+
+    private void setupAnimationStates() {
+        // Idle / Walk / Swim / WaterIdle / Sprint animation logic
+        if (this.isInWaterOrBubble()) {
+            if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+                // Swim
+                if (!this.attackAnimationState.isStarted()) {
+                    this.swimAnimationState.start(this.tickCount);
+                    this.walkAnimationState.stop();
+                    this.idleAnimationState.stop();
+                    this.waterIdleAnimationState.stop();
+                }
+            } else {
+                // WaterIdle
+                if (!this.waterIdleAnimationState.isStarted()) {
+                    this.waterIdleAnimationState.start(this.tickCount);
+                    this.swimAnimationState.stop();
+                    this.walkAnimationState.stop();
+                    this.idleAnimationState.stop();
+                }
+            }
+        } else {
+            if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+                if (this.isSprinting()) {
+                    // Sprinting (rider or chasing target)
+                    if (!this.sprintAnimationState.isStarted()) {
+                        this.sprintAnimationState.start(this.tickCount);
+                        this.walkAnimationState.stop();
+                        this.idleAnimationState.stop();
+                        this.waterIdleAnimationState.stop();
+                    }
+                } else {
+                    // Walking normally
+                    if (!this.walkAnimationState.isStarted()) {
+                        this.walkAnimationState.start(this.tickCount);
+                        this.sprintAnimationState.stop();
+                        this.idleAnimationState.stop();
+                        this.waterIdleAnimationState.stop();
+                    }
+                }
+            } else {
+                // Idle
+                if (!this.idleAnimationState.isStarted()) {
+                    this.idleAnimationState.start(this.tickCount);
+                    this.walkAnimationState.stop();
+                    this.sprintAnimationState.stop();
+                    this.waterIdleAnimationState.stop();
+                }
+            }
+            this.swimAnimationState.stop(); // outside water
+        }
+    }
+
+    // Checks if the Hell Hippo is currently moving horizontally.
+    public boolean isMoving() {
+        return this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6D;
+    }
+
 
     // ───────────────────────────────────────────────────── Sounds ─────
 
@@ -593,7 +634,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(0, new HellHippoFloatGoal(this));
 
         this.goalSelector.addGoal(2, new Hell_HippoAttackGoal(this,1.0D, true));
 
