@@ -485,6 +485,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return true;
     }
 
+    private int eatCooldown = 0; // Cooldown interno para comer
+
+    public final AnimationState eatAnimationState = new AnimationState();
     public final AnimationState idleAnimationState = new AnimationState();
     public final AnimationState attackAnimationState = new AnimationState();
     public final AnimationState walkAnimationState = new AnimationState();
@@ -492,55 +495,43 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState sprintAnimationState = new AnimationState();
     public final AnimationState waterIdleAnimationState = new AnimationState();
 
+    public boolean isIdle() {
+        return !this.isAttacking() && !this.isSleeping() && !this.isIntimidating() && !this.isVehicle();
+    }
+
     private void setupAnimationStates() {
-        // Idle / Walk / Swim / WaterIdle / Sprint animation logic
-        if (this.isInWaterOrBubble()) {
-            if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-                // Swim
-                if (!this.attackAnimationState.isStarted()) {
-                    this.swimAnimationState.start(this.tickCount);
-                    this.walkAnimationState.stop();
-                    this.idleAnimationState.stop();
-                    this.waterIdleAnimationState.stop();
-                }
-            } else {
-                // WaterIdle
-                if (!this.waterIdleAnimationState.isStarted()) {
-                    this.waterIdleAnimationState.start(this.tickCount);
-                    this.swimAnimationState.stop();
-                    this.walkAnimationState.stop();
-                    this.idleAnimationState.stop();
-                }
-            }
+        if (this.idleAnimationTimeout <= 0) {
+            this.idleAnimationTimeout = this.random.nextInt(40) + 80;
+            this.idleAnimationState.start(this.tickCount);
         } else {
-            if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-                if (this.isSprinting()) {
-                    // Sprinting (rider or chasing target)
-                    if (!this.sprintAnimationState.isStarted()) {
-                        this.sprintAnimationState.start(this.tickCount);
-                        this.walkAnimationState.stop();
-                        this.idleAnimationState.stop();
-                        this.waterIdleAnimationState.stop();
-                    }
-                } else {
-                    // Walking normally
-                    if (!this.walkAnimationState.isStarted()) {
-                        this.walkAnimationState.start(this.tickCount);
-                        this.sprintAnimationState.stop();
-                        this.idleAnimationState.stop();
-                        this.waterIdleAnimationState.stop();
-                    }
-                }
-            } else {
-                // Idle
-                if (!this.idleAnimationState.isStarted()) {
-                    this.idleAnimationState.start(this.tickCount);
-                    this.walkAnimationState.stop();
-                    this.sprintAnimationState.stop();
-                    this.waterIdleAnimationState.stop();
-                }
+            --this.idleAnimationTimeout;
+        }
+
+        if (this.isAttacking() && this.attackAnimationTimeout <= 0) {
+            this.attackAnimationTimeout = 20;
+            this.attackAnimationState.start(this.tickCount);
+        } else {
+            --this.attackAnimationTimeout;
+        }
+
+        if (!this.isAttacking()) {
+            this.attackAnimationState.stop();
+        }
+
+        // Eat Animation
+        if (this.isIdle() && this.onGround() && !this.isInWater()) {
+            if (this.eatCooldown <= 0 && this.random.nextInt(300) == 0) { // 1/300 chance each tick
+                this.eatAnimationState.start(this.tickCount);
+                this.eatCooldown = 100; // Duración de comer (~5 segundos)
             }
-            this.swimAnimationState.stop(); // outside water
+        }
+
+        if (this.eatCooldown > 0) {
+            this.eatCooldown--;
+        }
+
+        if (this.eatCooldown == 0 && this.eatAnimationState.isStarted()) {
+            this.eatAnimationState.stop();
         }
     }
 

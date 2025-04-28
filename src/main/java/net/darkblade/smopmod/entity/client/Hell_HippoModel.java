@@ -157,6 +157,7 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		this.animate(((Hell_HippoEntity) entity).swimAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.swim, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).sprintAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sprint, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).waterIdleAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.widle, ageInTicks, 1f);
+		this.animate(((Hell_HippoEntity) entity).eatAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.eat, ageInTicks, 1f);
 
 	}
 
