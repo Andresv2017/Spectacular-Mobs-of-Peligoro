@@ -32,11 +32,9 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ThrownPotion;
 import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
@@ -47,7 +45,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -86,28 +83,41 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState attackAnimationState = new AnimationState();
     public int attackAnimationTimeout = 0;
 
+    private int intimidatingTicks = 0;
+    private int staringTicks = 0;
+
     @Override
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide) {
-            if (fearCooldownTicks > 0) {
-                fearCooldownTicks--;
-                fearCooldownBossBar.setProgress(Math.max(0.0F, (float) fearCooldownTicks / 300F));
-            }
-
-            ServerPlayer rider = this.getRiderPlayer();
-
-            // Primero, quitar todos los que no deberían ver la barra
-            for (ServerPlayer player : new ArrayList<>(fearCooldownBossBar.getPlayers())) {
-                if (player != rider) {
-                    fearCooldownBossBar.removePlayer(player);
+        if (!this.level().isClientSide()) {
+            // Intimidation timer
+            if (this.isIntimidating()) {
+                if (this.intimidatingTicks > 0) {
+                    this.intimidatingTicks--;
+                } else {
+                    if (!this.isSleeping()) { // 👈 Solo calmarse si NO está dormido
+                        this.setIntimidating(false);
+                        this.setTrusting(false);
+                        this.trustingPlayerUUID = null;
+                        Player player = this.level().getNearestPlayer(this, 10);
+                        if (player != null) {
+                            player.displayClientMessage(Component.literal("§cHell Hippo has calmed down and forgotten your trust."), true);
+                        }
+                    }
+                    // Si está dormido, NO hace nada aquí
                 }
             }
 
-            // Luego, asegurarse que el rider actual sí la vea
-            if (rider != null && !fearCooldownBossBar.getPlayers().contains(rider)) {
-                fearCooldownBossBar.addPlayer(rider);
+            // Sleeping check (Weakness expired)
+            if (this.isSleeping() && !this.hasEffect(MobEffects.WEAKNESS)) {
+                this.setSleeping(false);
+                if (this.trustingPlayerUUID != null) {
+                    Player trustingPlayer = this.level().getPlayerByUUID(this.trustingPlayerUUID);
+                    if (trustingPlayer != null) {
+                        trustingPlayer.displayClientMessage(Component.literal("\u00a7eHell Hippo wakes up."), true);
+                    }
+                }
             }
         }
 
@@ -116,29 +126,40 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             return;
         }
 
-        if(this.level().isClientSide()) {
+        if (this.level().isClientSide()) {
             setupAnimationStates();
         }
 
-        if (!this.level().isClientSide && this.isTrusting() && !this.isSaddled() && this.trustingPlayerUUID != null) {
+        if (!this.level().isClientSide() && this.isTrusting() && !this.isSaddled() && this.trustingPlayerUUID != null) {
             Player player = this.level().getPlayerByUUID(this.trustingPlayerUUID);
             if (player != null) {
                 double distance = this.distanceTo(player);
                 if (!this.isIntimidating() && distance < 10.0D && this.hasLineOfSight(player)) {
                     this.setIntimidating(true);
-                    player.displayClientMessage(Component.literal("§6Hell Hippo is intimidating you!"), true);
+                    this.intimidatingTicks = 300; // 15 seconds
+                    player.displayClientMessage(Component.literal("\u00a76Hell Hippo is now intimidating!"), true);
                 }
                 if (this.isIntimidating()) {
-                    Vec3 toEntity = this.position().subtract(player.position()).normalize();
-                    double dot = player.getLookAngle().normalize().dot(toEntity);
-                    if (dot > 0.95D) {
-                        if (!player.hasEffect(MobEffects.WEAKNESS)) {
-                            player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 0));
+                    if (this.level() != null) {
+                        Vec3 toEntity = this.position().subtract(player.position()).normalize();
+                        double dot = player.getLookAngle().normalize().dot(toEntity);
+
+                        if (dot > 0.95D) {
+                            staringTicks++;
+
+                            if (staringTicks >= 100) { // 5 segundos = 100 ticks
+                                if (!player.hasEffect(MobEffects.WEAKNESS)) {
+                                    player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
+                                }
+                                if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+                                    player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+                                }
+                                player.displayClientMessage(Component.literal("§7You are terrified by the Hell Hippo!"), true);
+                                staringTicks = 0; // Reset
+                            }
+                        } else {
+                            staringTicks = 0; // Mirada perdida, resetea
                         }
-                        if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
-                            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 0));
-                        }
-                        player.displayClientMessage(Component.literal("§cYou are been terrified by the Hell Hippo!"), true);
                     }
                 }
             }
@@ -340,52 +361,54 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
         ItemStack itemstack = pPlayer.getItemInHand(pHand);
 
-        if (itemstack.is(Items.SADDLE)) {
-            if (!this.level().isClientSide) {
-                if (this.isSleeping() && this.isTrusting() && this.trustingPlayerUUID != null && pPlayer.getUUID().equals(this.trustingPlayerUUID)) {
+        if (!this.level().isClientSide) {
+            // Intento de usar Saddle
+            if (itemstack.is(Items.SADDLE)) {
+                if (this.isSleeping() && this.trustingPlayerUUID != null && pPlayer.getUUID().equals(this.trustingPlayerUUID)) {
                     this.equipSaddle(SoundSource.PLAYERS);
-                    this.setSleeping(false);
+                    this.setSleeping(false); // 👈 Se despierta
+                    this.setIntimidating(false); // 👈 Deja de intimidar si estaba
+                    this.intimidatingTicks = 0;  // 👈 Resetea conteo intimidante
+                    // 🚫 NO tocar Trusting aquí: se mantiene confiado
                     if (!pPlayer.getAbilities().instabuild) {
                         itemstack.shrink(1);
                     }
-                    pPlayer.displayClientMessage(Component.literal("§6Hell Hippo has been tamed with a Saddle!"), true);
+                    pPlayer.displayClientMessage(Component.literal("§6Hell Hippo has been tamed with a Saddle and wakes up!"), true);
                     return InteractionResult.SUCCESS;
                 } else {
-                    pPlayer.displayClientMessage(Component.literal("§cYou cannot tame the Hell Hippo yet!"), true);
                     return InteractionResult.FAIL;
                 }
             }
-            return InteractionResult.SUCCESS;
-        }
 
-        if (this.isFood(itemstack)) {
-            if (!this.level().isClientSide) {
+            // Intento de alimentar
+            if (this.isFood(itemstack)) {
                 this.usePlayerItem(pPlayer, pHand, itemstack);
                 if (!this.isTrusting()) {
                     if (this.random.nextInt(3) == 0) {
                         this.setTrusting(true);
                         this.trustingPlayerUUID = pPlayer.getUUID();
                         this.level().broadcastEntityEvent(this, (byte) 41);
-                        pPlayer.displayClientMessage(Component.literal("§aHell Hippo now trusts you " + pPlayer.getName().getString()), true);
+                        pPlayer.displayClientMessage(Component.literal("\u00a7aHell Hippo now trusts you, " + pPlayer.getName().getString()), true);
                     } else {
                         this.level().broadcastEntityEvent(this, (byte) 40);
-                        pPlayer.displayClientMessage(Component.literal("§cHell Hippo remains cautious..."), true);
+                        pPlayer.displayClientMessage(Component.literal("\u00a7cHell Hippo remains cautious..."), true);
                     }
                 } else {
-                    pPlayer.displayClientMessage(Component.literal("§bHell Hippo already trusts you!"), true);
+                    pPlayer.displayClientMessage(Component.literal("\u00a7bHell Hippo already trusts you!"), true);
                 }
+                return InteractionResult.SUCCESS;
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+
+            // Intento de montar
+            if (this.isSaddled() && !this.isVehicle() && !pPlayer.isSecondaryUseActive()) {
+                pPlayer.startRiding(this);
+                return InteractionResult.SUCCESS;
+            }
         }
 
-        if (!this.level().isClientSide && this.isSaddled() && !this.isVehicle() && !pPlayer.isSecondaryUseActive()) {
-            pPlayer.startRiding(this);
-            return InteractionResult.SUCCESS;
-        }
-
-        // Si no es Saddle ni comida, ni montar, recién aquí hacemos super:
         return super.mobInteract(pPlayer, pHand);
     }
+
 
 
     @Override
