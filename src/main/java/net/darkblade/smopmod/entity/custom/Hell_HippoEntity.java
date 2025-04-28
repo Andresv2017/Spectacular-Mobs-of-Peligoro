@@ -90,13 +90,29 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide()) {
+        if (!this.level().isClientSide) {
+            // Cooldown de Fear BossBar
+            if (fearCooldownTicks > 0) {
+                fearCooldownTicks--;
+                fearCooldownBossBar.setProgress(Math.max(0.0F, (float) fearCooldownTicks / (float) FEAR_COOLDOWN_DURATION));
+
+                ServerPlayer rider = this.getRiderPlayer();
+                fearCooldownBossBar.removeAllPlayers();
+                if (rider != null) {
+                    fearCooldownBossBar.addPlayer(rider);
+                }
+            } else {
+                fearCooldownBossBar.setProgress(0.0F);
+                fearCooldownBossBar.setVisible(false);
+                fearCooldownBossBar.removeAllPlayers();
+            }
+
             // Intimidation timer
             if (this.isIntimidating()) {
                 if (this.intimidatingTicks > 0) {
                     this.intimidatingTicks--;
                 } else {
-                    if (!this.isSleeping()) { // 👈 Solo calmarse si NO está dormido
+                    if (!this.isSleeping()) {
                         this.setIntimidating(false);
                         this.setTrusting(false);
                         this.trustingPlayerUUID = null;
@@ -105,11 +121,10 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                             player.displayClientMessage(Component.literal("§cHell Hippo has calmed down and forgotten your trust."), true);
                         }
                     }
-                    // Si está dormido, NO hace nada aquí
                 }
             }
 
-            // Sleeping check (Weakness expired)
+            // Sleeping check
             if (this.isSleeping() && !this.hasEffect(MobEffects.WEAKNESS)) {
                 this.setSleeping(false);
                 if (this.trustingPlayerUUID != null) {
@@ -140,31 +155,29 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     player.displayClientMessage(Component.literal("\u00a76Hell Hippo is now intimidating!"), true);
                 }
                 if (this.isIntimidating()) {
-                    if (this.level() != null) {
-                        Vec3 toEntity = this.position().subtract(player.position()).normalize();
-                        double dot = player.getLookAngle().normalize().dot(toEntity);
+                    Vec3 toEntity = this.position().subtract(player.position()).normalize();
+                    double dot = player.getLookAngle().normalize().dot(toEntity);
 
-                        if (dot > 0.95D) {
-                            staringTicks++;
-
-                            if (staringTicks >= 100) { // 5 segundos = 100 ticks
-                                if (!player.hasEffect(MobEffects.WEAKNESS)) {
-                                    player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
-                                }
-                                if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
-                                    player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
-                                }
-                                player.displayClientMessage(Component.literal("§7You are terrified by the Hell Hippo!"), true);
-                                staringTicks = 0; // Reset
+                    if (dot > 0.95D) {
+                        staringTicks++;
+                        if (staringTicks >= 100) {
+                            if (!player.hasEffect(MobEffects.WEAKNESS)) {
+                                player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
                             }
-                        } else {
-                            staringTicks = 0; // Mirada perdida, resetea
+                            if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
+                                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+                            }
+                            player.displayClientMessage(Component.literal("\u00a77You are terrified by the Hell Hippo!"), true);
+                            staringTicks = 0;
                         }
+                    } else {
+                        staringTicks = 0;
                     }
                 }
             }
         }
     }
+
 
     private void setupAnimationStates (){
 
@@ -607,9 +620,15 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     public void triggerFearCooldown() {
         if (!this.level().isClientSide) {
-            fearCooldownTicks = FEAR_COOLDOWN_DURATION;
-            fearCooldownBossBar.setProgress(1.0f);
-            fearCooldownBossBar.setVisible(true);
+            this.fearCooldownTicks = FEAR_COOLDOWN_DURATION;
+            this.fearCooldownBossBar.setProgress(1.0f);
+            this.fearCooldownBossBar.setVisible(true);
+
+            ServerPlayer rider = this.getRiderPlayer();
+            this.fearCooldownBossBar.removeAllPlayers(); // Limpiar
+            if (rider != null) {
+                this.fearCooldownBossBar.addPlayer(rider);
+            }
         }
     }
 
@@ -618,7 +637,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     }
 
     public void startSeenBy(ServerPlayer player) {
-        this.fearCooldownBossBar.addPlayer(player);
+        if (this.isFearOnCooldown()) {
+            this.fearCooldownBossBar.addPlayer(player);
+        }
     }
 
     public void stopSeenBy(ServerPlayer player) {
