@@ -51,47 +51,51 @@ import java.util.function.Predicate;
 
 public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleable {
 
+    // ───────────────────────────────────────────────────── Synced Data ─────
+
     private static final EntityDataAccessor<Boolean> DATA_SADDLE_ID;
     private static final EntityDataAccessor<Integer> DATA_BOOST_TIME;
     private static final EntityDataAccessor<Boolean> DATA_TRUSTING;
     private static final EntityDataAccessor<Boolean> DATA_INTIMIDATING;
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING;
+    private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final Ingredient FOOD_ITEMS;
+
+    // ───────────────────────────────────────────────────── Constructor ─────
+
     private final ItemBasedSteering steering;
+    private final ServerBossEvent fearCooldownBossBar = new ServerBossEvent( Component.literal("Fear Cooldown"), BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
     public UUID trustingPlayerUUID;
 
-    private static final EntityDataAccessor<Boolean> ATTACKING =
-            SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+    public final AnimationState idleAnimationState = new AnimationState();
+    public final AnimationState attackAnimationState = new AnimationState();
 
-    private final ServerBossEvent fearCooldownBossBar = new ServerBossEvent(
-            Component.literal("Fear Cooldown"),
-            BossEvent.BossBarColor.BLUE,
-            BossEvent.BossBarOverlay.PROGRESS
-    );
-
-    private int fearCooldownTicks = 0;
-    private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
+    public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
+        EntityType<?> entitytype = p_289448_.getType();
+        return entitytype == EntityType.SHEEP || entitytype == EntityType.GOAT || entitytype == EntityType.COW;
+    };
 
     public Hell_HippoEntity(EntityType<? extends Animal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
         this.steering = new ItemBasedSteering(this.entityData, DATA_BOOST_TIME, DATA_SADDLE_ID);
     }
 
-    public final AnimationState idleAnimationState = new AnimationState();
     private int idleAnimationTimeout = 0;
-
-    public final AnimationState attackAnimationState = new AnimationState();
     public int attackAnimationTimeout = 0;
-
     private int intimidatingTicks = 0;
     private int staringTicks = 0;
+    private int fearCooldownTicks = 0;
+
+    private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
+
+    // ───────────────────────────────────────────────────── Tick ─────
 
     @Override
     public void tick() {
         super.tick();
 
         if (!this.level().isClientSide) {
-            // Cooldown de Fear BossBar
+            // Cooldown Fear BossBar
             if (fearCooldownTicks > 0) {
                 fearCooldownTicks--;
                 fearCooldownBossBar.setProgress(Math.max(0.0F, (float) fearCooldownTicks / (float) FEAR_COOLDOWN_DURATION));
@@ -179,196 +183,82 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     }
 
 
-    private void setupAnimationStates (){
+    // ───────────────────────────────────────────────────── Fear System ─────
 
-        if(this.idleAnimationTimeout <= 0) {
-            this.idleAnimationTimeout = this.random.nextInt(40)+80;
-            this.idleAnimationState.start(this.tickCount);
-        } else {
-            --this.idleAnimationTimeout;
-        }
+    public void triggerFearCooldown() {
+        if (!this.level().isClientSide) {
+            this.fearCooldownTicks = FEAR_COOLDOWN_DURATION;
+            this.fearCooldownBossBar.setProgress(1.0f);
+            this.fearCooldownBossBar.setVisible(true);
 
-        if(this.isAttacking() && attackAnimationTimeout <= 0) {
-            attackAnimationTimeout = 20; // Length in ticks of your animation
-            attackAnimationState.start(this.tickCount);
-        } else {
-            --this.attackAnimationTimeout;
-        }
-
-        if(!this.isAttacking()) {
-            attackAnimationState.stop();
-        }
-    }
-
-    @Override
-    protected void updateWalkAnimation(float pPartialTick) {
-        float f;
-        if(this.getPose() == Pose.STANDING) {
-            f = Math.min(pPartialTick * 6f, 1f);
-        } else {
-            f = 0;
-        }
-        this.walkAnimation.update(f,0.2f);
-    }
-
-    public void setAttacking(boolean attacking) {
-        this.entityData.set(ATTACKING, attacking);
-    }
-
-    public boolean isAttacking() {
-        return this.entityData.get(ATTACKING);
-    }
-
-    public boolean isTrusting() {
-        return this.entityData.get(DATA_TRUSTING);
-    }
-
-    public void setTrusting(boolean trusting) {
-        this.entityData.set(DATA_TRUSTING, trusting);
-    }
-
-    public boolean isIntimidating() {
-        return this.entityData.get(DATA_INTIMIDATING);
-    }
-
-    public void setIntimidating(boolean intimidating) {
-        this.entityData.set(DATA_INTIMIDATING, intimidating);
-    }
-
-    public boolean isSleeping() {
-        return this.entityData.get(DATA_SLEEPING);
-    }
-
-    public void setSleeping(boolean sleeping) {
-        this.entityData.set(DATA_SLEEPING, sleeping);
-    }
-
-    @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ATTACKING, false);
-        this.entityData.define(DATA_SADDLE_ID, false);
-        this.entityData.define(DATA_BOOST_TIME, 0);
-        this.entityData.define(DATA_TRUSTING, false);
-        this.entityData.define(DATA_INTIMIDATING, false);
-        this.entityData.define(DATA_SLEEPING, false);
-    }
-
-    public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
-        EntityType<?> entitytype = p_289448_.getType();
-        return entitytype == EntityType.SHEEP || entitytype == EntityType.GOAT || entitytype == EntityType.COW;
-    };
-
-
-    @Override
-    protected void registerGoals() {
-        this.goalSelector.addGoal(0, new FloatGoal(this));
-
-        this.goalSelector.addGoal(2, new Hell_HippoAttackGoal(this,1.0D, true));
-
-        this.goalSelector.addGoal(1,new BreedGoal(this, 1.15D));
-        this.goalSelector.addGoal(2,new TemptGoal(this, 1.2D, Ingredient.of(Items.BEEF),false));
-        this.goalSelector.addGoal(2, new TemptGoal(this, 1.2, Ingredient.of(new ItemLike[]{Items.CARROT_ON_A_STICK}), false));
-
-
-        this.goalSelector.addGoal(3,new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(4, new RandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(5,new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(6,new RandomLookAroundGoal(this));
-
-        this.targetSelector.addGoal(0, new HellHippoDefendOwnerGoal(this));
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Animal.class, false, PREY_SELECTOR));
-
-    }
-
-    public static AttributeSupplier.Builder createAttributes() {
-        return Animal.createLivingAttributes()
-                .add(Attributes.MAX_HEALTH,20.0)
-                .add(Attributes.FOLLOW_RANGE,24D)
-                .add(Attributes.MOVEMENT_SPEED, 0.250)
-                .add(Attributes.ARMOR_TOUGHNESS, 0.1f)
-                .add(Attributes.ATTACK_KNOCKBACK, 0.5f)
-                .add(Attributes.ATTACK_DAMAGE, 2f);
-    }
-
-    @javax.annotation.Nullable
-    public LivingEntity getControllingPassenger() {
-        if (this.isSaddled()) {
-            Entity entity = this.getFirstPassenger();
-            if (entity instanceof Player) {
-                Player player = (Player)entity;
-                if (player.getMainHandItem().is(Items.CARROT_ON_A_STICK) || player.getOffhandItem().is(Items.CARROT_ON_A_STICK)) {
-                    return player;
-                }
+            ServerPlayer rider = this.getRiderPlayer();
+            this.fearCooldownBossBar.removeAllPlayers(); // Limpiar
+            if (rider != null) {
+                this.fearCooldownBossBar.addPlayer(rider);
             }
         }
+    }
 
+    public boolean isFearOnCooldown() {return fearCooldownTicks > 0;}
+
+    public void performFearEffect(Player player) {
+        if (this.isFearOnCooldown()) {
+            // No mostrar mensaje ya que la BossBar indica el cooldown
+            return;
+        }
+
+        double range = 10.0D;
+        Vec3 pos = this.position();
+        List<LivingEntity> entities = this.level().getEntitiesOfClass(LivingEntity.class,
+                new AABB(pos.x - range, pos.y - 2, pos.z - range, pos.x + range, pos.y + 2, pos.z + range),
+                (entity) -> entity.isAlive()
+                        && !(entity instanceof Hell_HippoEntity)
+                        && entity != player
+                        && !(entity instanceof TamableAnimal tamable && tamable.isOwnedBy(player))
+        );
+
+        for (LivingEntity entity : entities) {
+            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
+            entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+        }
+
+        player.displayClientMessage(Component.literal("§9Hell Hippo unleashes FEAR!"), true);
+
+        this.triggerFearCooldown();
+    }
+
+    public void startSeenBy(ServerPlayer player) {
+        if (this.isFearOnCooldown()) {
+            this.fearCooldownBossBar.addPlayer(player);
+        }
+    }
+
+    public void stopSeenBy(ServerPlayer player) {
+        this.fearCooldownBossBar.removePlayer(player);
+    }
+
+    @Nullable
+    private ServerPlayer getRiderPlayer() {
+        Entity passenger = this.getFirstPassenger();
+        if (passenger instanceof ServerPlayer serverPlayer) {
+            return serverPlayer;
+        }
         return null;
     }
 
-    public void onSyncedDataUpdated(EntityDataAccessor<?> pKey) {
-        if (DATA_BOOST_TIME.equals(pKey) && this.level().isClientSide) {
-            this.steering.onSynced();
-        }
-        if (pKey.equals(DATA_INTIMIDATING) && this.level().isClientSide && this.isIntimidating()) {
-            Minecraft.getInstance().player.displayClientMessage(Component.literal("§6Hell Hippo is intimidating you!"), true);
-        }
-        super.onSyncedDataUpdated(pKey);
-    }
+    // ───────────────────────────────────────────────────── Trust System ─────
 
-    public void addAdditionalSaveData(CompoundTag pCompound) {
-        super.addAdditionalSaveData(pCompound);
-        this.steering.addAdditionalSaveData(pCompound);
-        pCompound.putBoolean("Trusting", this.isTrusting());
-        pCompound.putBoolean("Intimidating", this.isIntimidating());
-        pCompound.putBoolean("Sleeping", this.isSleeping());
-        if (this.trustingPlayerUUID != null) {
-            pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
-        }
-    }
+    public boolean isTrusting() {return this.entityData.get(DATA_TRUSTING);}
 
-    public void readAdditionalSaveData(CompoundTag pCompound) {
-        super.readAdditionalSaveData(pCompound);
-        this.steering.readAdditionalSaveData(pCompound);
-        if (pCompound.contains("Trusting")) {
-            this.setTrusting(pCompound.getBoolean("Trusting"));
-        }
-        if (pCompound.contains("Intimidating")) {
-            this.setIntimidating(pCompound.getBoolean("Intimidating"));
-        }
-        if (pCompound.contains("Sleeping")) {
-            this.setSleeping(pCompound.getBoolean("Sleeping"));
-        }
-        if (pCompound.hasUUID("TrustingPlayerUUID")) {
-            this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
-        }
-    }
+    public void setTrusting(boolean trusting) {this.entityData.set(DATA_TRUSTING, trusting);}
 
-    @Override
-    public boolean addEffect(MobEffectInstance effectInstance, @Nullable Entity source) {
-        if (!this.level().isClientSide && effectInstance.getEffect() == MobEffects.WEAKNESS) {
-            if (this.isIntimidating() && !this.isSleeping()) {
-                this.setSleeping(true);
-                if (source instanceof Player player) {
-                    player.displayClientMessage(Component.literal("§9Hell Hippo falls asleep... Zzz..."), true);
-                }
-            }
-        }
-        return super.addEffect(effectInstance, source);
-    }
+    public boolean isIntimidating() {return this.entityData.get(DATA_INTIMIDATING);}
 
-    public boolean canAttackTarget(LivingEntity target) {
-        if (this.isSaddled() && this.isTrusting() && this.getFirstPassenger() != null) {
-            return false; // No atacar si está confiado, ensillado y montado
-        }
-        if (this.isVehicle()) {
-            return false; // También no atacar si simplemente está montado
-        }
-        return true;
-    }
+    public void setIntimidating(boolean intimidating) {this.entityData.set(DATA_INTIMIDATING, intimidating);}
 
+    public boolean isSleeping() {return this.entityData.get(DATA_SLEEPING);}
+
+    public void setSleeping(boolean sleeping) {this.entityData.set(DATA_SLEEPING, sleeping);}
 
     @Override
     public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
@@ -422,64 +312,23 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return super.mobInteract(pPlayer, pHand);
     }
 
-
+    // ───────────────────────────────────────────────────── Saddle System ─────
 
     @Override
-    public boolean canAttack(LivingEntity target) {
-        if (this.isTrusting() && this.trustingPlayerUUID != null) {
-            if (target instanceof Player player) {
-                return !player.getUUID().equals(this.trustingPlayerUUID); // no atacar a su dueño
-            }
-            if (target instanceof TamableAnimal tamable) {
-                if (tamable.isOwnedBy(this.level().getPlayerByUUID(this.trustingPlayerUUID))) {
-                    return false; // no atacar mascotas de su dueño
-                }
-            }
+    public boolean boost() {return this.steering.boost(this.getRandom());}
+
+    @Override
+    public boolean isSaddled() {return this.steering.hasSaddle();}
+
+    @Override
+    public boolean isSaddleable() {return this.isAlive() && !this.isBaby() && this.isSleeping() && this.isTrusting();}
+
+    @Override
+    public void equipSaddle(@Nullable SoundSource soundSource) {
+        this.steering.setSaddle(true);
+        if (soundSource != null) {
+            this.level().playSound((Player)null, this, SoundEvents.PIG_SADDLE, soundSource, 0.5F, 1.0F);
         }
-        return super.canAttack(target);
-    }
-
-
-    @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel pLevel, AgeableMob ageableMob) {
-        return ModEntities.HELL_HIPPO.get().create(pLevel);
-    }
-
-    @Override
-    public boolean isFood(ItemStack pStack) {
-        return pStack.is(Items.BEEF);
-    }
-
-    @Override
-    protected @Nullable SoundEvent getAmbientSound(){
-        return SoundEvents.HOGLIN_AMBIENT;
-    }
-
-    @Override
-    protected @Nullable SoundEvent getHurtSound(DamageSource pDamageSource) {
-        return SoundEvents.RAVAGER_HURT;
-    }
-
-    @Override
-    protected @Nullable SoundEvent getDeathSound() {
-        return SoundEvents.HOGLIN_DEATH;
-    }
-
-    @Override
-    protected void dropCustomDeathLoot(DamageSource pSource, int pLooting, boolean pRecentlyHit) {
-        super.dropCustomDeathLoot(pSource, pLooting, pRecentlyHit);
-    }
-
-    //Montable
-
-    @Override
-    public boolean boost() {
-        return this.steering.boost(this.getRandom());
-    }
-
-    @Override
-    public boolean isSaddleable() {
-        return this.isAlive() && !this.isBaby() && this.isSleeping() && this.isTrusting();
     }
 
     protected void dropEquipment() {
@@ -489,12 +338,17 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
-    @Override
-    public void equipSaddle(@Nullable SoundSource soundSource) {
-        this.steering.setSaddle(true);
-        if (soundSource != null) {
-            this.level().playSound((Player)null, this, SoundEvents.PIG_SADDLE, soundSource, 0.5F, 1.0F);
-        }
+    protected void tickRidden(Player pPlayer, Vec3 pTravelVector) {
+        super.tickRidden(pPlayer, pTravelVector);
+        this.setRot(pPlayer.getYRot(), pPlayer.getXRot() * 0.5F);
+        this.yRotO = this.yBodyRot = this.yHeadRot = this.getYRot();
+        this.steering.tickBoost();
+    }
+
+    protected Vec3 getRiddenInput(Player pPlayer, Vec3 pTravelVector) {return new Vec3(0.0, 0.0, 1.0);}
+
+    protected float getRiddenSpeed(Player pPlayer) {
+        return (float)(this.getAttributeValue(Attributes.MOVEMENT_SPEED) * 1 * (double)this.steering.boostFactor());
     }
 
     public Vec3 getDismountLocationForPassenger(LivingEntity pLivingEntity) {
@@ -531,35 +385,31 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
-    protected void tickRidden(Player pPlayer, Vec3 pTravelVector) {
-        super.tickRidden(pPlayer, pTravelVector);
-        this.setRot(pPlayer.getYRot(), pPlayer.getXRot() * 0.5F);
-        this.yRotO = this.yBodyRot = this.yHeadRot = this.getYRot();
-        this.steering.tickBoost();
+    @Override
+    public double getPassengersRidingOffset() {
+        return this.getBbHeight() * 0.75D + 0.4D;
     }
 
-    protected Vec3 getRiddenInput(Player pPlayer, Vec3 pTravelVector) {
-        return new Vec3(0.0, 0.0, 1.0);
-    }
+    @javax.annotation.Nullable
+    public LivingEntity getControllingPassenger() {
+        if (this.isSaddled()) {
+            Entity entity = this.getFirstPassenger();
+            if (entity instanceof Player) {
+                Player player = (Player)entity;
+                if (player.getMainHandItem().is(Items.CARROT_ON_A_STICK) || player.getOffhandItem().is(Items.CARROT_ON_A_STICK)) {
+                    return player;
+                }
+            }
+        }
 
-    protected float getRiddenSpeed(Player pPlayer) {
-        return (float)(this.getAttributeValue(Attributes.MOVEMENT_SPEED) * 1 * (double)this.steering.boostFactor());
+        return null;
     }
 
     public Vec3 getLeashOffset() {
         return new Vec3(0.0, (double)(0.6F * this.getEyeHeight()), (double)(this.getBbWidth() * 0.4F));
     }
 
-    @Override
-    public boolean isSaddled() {
-        return this.steering.hasSaddle();
-    }
-
-    @Override
-    public double getPassengersRidingOffset() {
-        return this.getBbHeight() * 0.75D + 0.4D;
-    }
-
+    // ───────────────────────────────────────────────────── Attack System ─────
 
     public void performMountedAttack(Player player) {
         LivingEntity target = this.findNearestAttackableTarget();
@@ -592,68 +442,189 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 .orElse(null);
     }
 
-    public void performFearEffect(Player player) {
-        if (this.isFearOnCooldown()) {
-            // No mostrar mensaje ya que la BossBar indica el cooldown
-            return;
+    public boolean canAttackTarget(LivingEntity target) {
+        if (this.isSaddled() && this.isTrusting() && this.getFirstPassenger() != null) {
+            return false; // No atacar si está confiado, ensillado y montado
         }
-
-        double range = 10.0D;
-        Vec3 pos = this.position();
-        List<LivingEntity> entities = this.level().getEntitiesOfClass(LivingEntity.class,
-                new AABB(pos.x - range, pos.y - 2, pos.z - range, pos.x + range, pos.y + 2, pos.z + range),
-                (entity) -> entity.isAlive()
-                        && !(entity instanceof Hell_HippoEntity)
-                        && entity != player
-                        && !(entity instanceof TamableAnimal tamable && tamable.isOwnedBy(player))
-        );
-
-        for (LivingEntity entity : entities) {
-            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
-            entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+        if (this.isVehicle()) {
+            return false; // También no atacar si simplemente está montado
         }
-
-        player.displayClientMessage(Component.literal("§9Hell Hippo unleashes FEAR!"), true);
-
-        this.triggerFearCooldown();
+        return true;
     }
 
-    public void triggerFearCooldown() {
-        if (!this.level().isClientSide) {
-            this.fearCooldownTicks = FEAR_COOLDOWN_DURATION;
-            this.fearCooldownBossBar.setProgress(1.0f);
-            this.fearCooldownBossBar.setVisible(true);
+    public void setAttacking(boolean attacking) {
+        this.entityData.set(ATTACKING, attacking);
+    }
 
-            ServerPlayer rider = this.getRiderPlayer();
-            this.fearCooldownBossBar.removeAllPlayers(); // Limpiar
-            if (rider != null) {
-                this.fearCooldownBossBar.addPlayer(rider);
+    public boolean isAttacking() {
+        return this.entityData.get(ATTACKING);
+    }
+
+    @Override
+    public boolean canAttack(LivingEntity target) {
+        if (this.isTrusting() && this.trustingPlayerUUID != null) {
+            if (target instanceof Player player) {
+                return !player.getUUID().equals(this.trustingPlayerUUID); // no atacar a su dueño
+            }
+            if (target instanceof TamableAnimal tamable) {
+                if (tamable.isOwnedBy(this.level().getPlayerByUUID(this.trustingPlayerUUID))) {
+                    return false; // no atacar mascotas de su dueño
+                }
             }
         }
+        return super.canAttack(target);
     }
 
-    public boolean isFearOnCooldown() {
-        return fearCooldownTicks > 0;
-    }
+    // ───────────────────────────────────────────────────── Animations ─────
 
-    public void startSeenBy(ServerPlayer player) {
-        if (this.isFearOnCooldown()) {
-            this.fearCooldownBossBar.addPlayer(player);
+    private void setupAnimationStates (){
+
+        if(this.idleAnimationTimeout <= 0) {
+            this.idleAnimationTimeout = this.random.nextInt(40)+80;
+            this.idleAnimationState.start(this.tickCount);
+        } else {
+            --this.idleAnimationTimeout;
+        }
+
+        if(this.isAttacking() && attackAnimationTimeout <= 0) {
+            attackAnimationTimeout = 20; // Length in ticks of your animation
+            attackAnimationState.start(this.tickCount);
+        } else {
+            --this.attackAnimationTimeout;
+        }
+
+        if(!this.isAttacking()) {
+            attackAnimationState.stop();
         }
     }
 
-    public void stopSeenBy(ServerPlayer player) {
-        this.fearCooldownBossBar.removePlayer(player);
+    @Override
+    protected void updateWalkAnimation(float pPartialTick) {
+        float f;
+        if(this.getPose() == Pose.STANDING) {
+            f = Math.min(pPartialTick * 6f, 1f);
+        } else {
+            f = 0;
+        }
+        this.walkAnimation.update(f,0.2f);
     }
 
-    @Nullable
-    private ServerPlayer getRiderPlayer() {
-        Entity passenger = this.getFirstPassenger();
-        if (passenger instanceof ServerPlayer serverPlayer) {
-            return serverPlayer;
-        }
-        return null;
+    // ───────────────────────────────────────────────────── Sounds ─────
+
+    @Override
+    protected @Nullable SoundEvent getAmbientSound(){return SoundEvents.HOGLIN_AMBIENT;}
+
+    @Override
+    protected @Nullable SoundEvent getHurtSound(DamageSource pDamageSource) {return SoundEvents.RAVAGER_HURT;}
+
+    @Override
+    protected @Nullable SoundEvent getDeathSound() {return SoundEvents.HOGLIN_DEATH;}
+
+    @Override
+    protected void dropCustomDeathLoot(DamageSource pSource, int pLooting, boolean pRecentlyHit) {
+        super.dropCustomDeathLoot(pSource, pLooting, pRecentlyHit);
     }
+
+    // ───────────────────────────────────────────────────── Serialization (NBT) ─────
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(ATTACKING, false);
+        this.entityData.define(DATA_SADDLE_ID, false);
+        this.entityData.define(DATA_BOOST_TIME, 0);
+        this.entityData.define(DATA_TRUSTING, false);
+        this.entityData.define(DATA_INTIMIDATING, false);
+        this.entityData.define(DATA_SLEEPING, false);
+    }
+
+    public void addAdditionalSaveData(CompoundTag pCompound) {
+        super.addAdditionalSaveData(pCompound);
+        this.steering.addAdditionalSaveData(pCompound);
+        pCompound.putBoolean("Trusting", this.isTrusting());
+        pCompound.putBoolean("Intimidating", this.isIntimidating());
+        pCompound.putBoolean("Sleeping", this.isSleeping());
+        if (this.trustingPlayerUUID != null) {
+            pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
+        }
+    }
+
+    public void readAdditionalSaveData(CompoundTag pCompound) {
+        super.readAdditionalSaveData(pCompound);
+        this.steering.readAdditionalSaveData(pCompound);
+        if (pCompound.contains("Trusting")) {
+            this.setTrusting(pCompound.getBoolean("Trusting"));
+        }
+        if (pCompound.contains("Intimidating")) {
+            this.setIntimidating(pCompound.getBoolean("Intimidating"));
+        }
+        if (pCompound.contains("Sleeping")) {
+            this.setSleeping(pCompound.getBoolean("Sleeping"));
+        }
+        if (pCompound.hasUUID("TrustingPlayerUUID")) {
+            this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
+        }
+    }
+
+    public void onSyncedDataUpdated(EntityDataAccessor<?> pKey) {
+        if (DATA_BOOST_TIME.equals(pKey) && this.level().isClientSide) {
+            this.steering.onSynced();
+        }
+        if (pKey.equals(DATA_INTIMIDATING) && this.level().isClientSide && this.isIntimidating()) {
+            Minecraft.getInstance().player.displayClientMessage(Component.literal("§6Hell Hippo is intimidating you!"), true);
+        }
+        super.onSyncedDataUpdated(pKey);
+    }
+
+    @Override
+    public boolean addEffect(MobEffectInstance effectInstance, @Nullable Entity source) {
+        if (!this.level().isClientSide && effectInstance.getEffect() == MobEffects.WEAKNESS) {
+            if (this.isIntimidating() && !this.isSleeping()) {
+                this.setSleeping(true);
+                if (source instanceof Player player) {
+                    player.displayClientMessage(Component.literal("§9Hell Hippo falls asleep... Zzz..."), true);
+                }
+            }
+        }
+        return super.addEffect(effectInstance, source);
+    }
+
+    // ───────────────────────────────────────────────────── Goals ─────
+
+    @Override
+    protected void registerGoals() {
+        this.goalSelector.addGoal(0, new FloatGoal(this));
+
+        this.goalSelector.addGoal(2, new Hell_HippoAttackGoal(this,1.0D, true));
+
+        this.goalSelector.addGoal(1,new BreedGoal(this, 1.15D));
+        this.goalSelector.addGoal(2,new TemptGoal(this, 1.2D, Ingredient.of(Items.BEEF),false));
+        this.goalSelector.addGoal(2, new TemptGoal(this, 1.2, Ingredient.of(new ItemLike[]{Items.CARROT_ON_A_STICK}), false));
+
+
+        this.goalSelector.addGoal(3,new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(4, new RandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(5,new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(6,new RandomLookAroundGoal(this));
+
+        this.targetSelector.addGoal(0, new HellHippoDefendOwnerGoal(this));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Animal.class, false, PREY_SELECTOR));
+
+    }
+
+    public static AttributeSupplier.Builder createAttributes() {
+        return Animal.createLivingAttributes()
+                .add(Attributes.MAX_HEALTH,20.0)
+                .add(Attributes.FOLLOW_RANGE,24D)
+                .add(Attributes.MOVEMENT_SPEED, 0.250)
+                .add(Attributes.ARMOR_TOUGHNESS, 0.1f)
+                .add(Attributes.ATTACK_KNOCKBACK, 0.5f)
+                .add(Attributes.ATTACK_DAMAGE, 2f);
+    }
+
+    // ───────────────────────────────────────────────────── Event Subscriptions ─────
 
     @Mod.EventBusSubscriber
     public static class ModEvents {
@@ -668,6 +639,8 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
+    // ───────────────────────────────────────────────────── Static Block ─────
+
     static {
         DATA_SADDLE_ID = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_BOOST_TIME = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.INT);
@@ -676,4 +649,12 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         DATA_SLEEPING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.BEEF});
     }
+
+    // ───────────────────────────────────────────────────── Breeding ─────
+
+    @Override
+    public @Nullable AgeableMob getBreedOffspring(ServerLevel pLevel, AgeableMob ageableMob) {return ModEntities.HELL_HIPPO.get().create(pLevel);}
+
+    @Override
+    public boolean isFood(ItemStack pStack) {return pStack.is(Items.BEEF);}
 }
