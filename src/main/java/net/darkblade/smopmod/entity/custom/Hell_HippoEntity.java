@@ -495,37 +495,70 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState sprintAnimationState = new AnimationState();
     public final AnimationState waterIdleAnimationState = new AnimationState();
 
-    public boolean isIdle() {
-        return !this.isAttacking() && !this.isSleeping() && !this.isIntimidating() && !this.isVehicle();
-    }
-
     private void setupAnimationStates() {
-        if (this.idleAnimationTimeout <= 0) {
-            this.idleAnimationTimeout = this.random.nextInt(40) + 80;
-            this.idleAnimationState.start(this.tickCount);
+        // Idle / Walk / Swim / WaterIdle / Sprint animation logic
+        if (this.isInWaterOrBubble()) {
+            if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+                // Swim
+                if (!this.attackAnimationState.isStarted()) {
+                    this.swimAnimationState.start(this.tickCount);
+                    this.walkAnimationState.stop();
+                    this.idleAnimationState.stop();
+                    this.waterIdleAnimationState.stop();
+                    this.eatAnimationState.stop();
+                }
+            } else {
+                // WaterIdle
+                if (!this.waterIdleAnimationState.isStarted()) {
+                    this.waterIdleAnimationState.start(this.tickCount);
+                    this.swimAnimationState.stop();
+                    this.walkAnimationState.stop();
+                    this.idleAnimationState.stop();
+                    this.eatAnimationState.stop();
+                }
+            }
         } else {
-            --this.idleAnimationTimeout;
-        }
+            if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+                if (this.isSprinting()) {
+                    // Sprinting
+                    if (!this.sprintAnimationState.isStarted()) {
+                        this.sprintAnimationState.start(this.tickCount);
+                        this.walkAnimationState.stop();
+                        this.idleAnimationState.stop();
+                        this.waterIdleAnimationState.stop();
+                        this.eatAnimationState.stop();
+                    }
+                } else {
+                    // Walking normally
+                    if (!this.walkAnimationState.isStarted()) {
+                        this.walkAnimationState.start(this.tickCount);
+                        this.sprintAnimationState.stop();
+                        this.idleAnimationState.stop();
+                        this.waterIdleAnimationState.stop();
+                        this.eatAnimationState.stop();
+                    }
+                }
+            } else {
+                // Idle / Eat
+                if (!this.idleAnimationState.isStarted() && !this.eatAnimationState.isStarted()) {
+                    this.idleAnimationState.start(this.tickCount);
+                    this.walkAnimationState.stop();
+                    this.sprintAnimationState.stop();
+                    this.waterIdleAnimationState.stop();
+                    this.swimAnimationState.stop();
+                }
 
-        if (this.isAttacking() && this.attackAnimationTimeout <= 0) {
-            this.attackAnimationTimeout = 20;
-            this.attackAnimationState.start(this.tickCount);
-        } else {
-            --this.attackAnimationTimeout;
-        }
-
-        if (!this.isAttacking()) {
-            this.attackAnimationState.stop();
-        }
-
-        // Eat Animation
-        if (this.isIdle() && this.onGround() && !this.isInWater()) {
-            if (this.eatCooldown <= 0 && this.random.nextInt(300) == 0) { // 1/300 chance each tick
-                this.eatAnimationState.start(this.tickCount);
-                this.eatCooldown = 100; // Duración de comer (~5 segundos)
+                if (this.onGround() && !this.isInWater() && !this.isSleeping() && !this.isAttacking()) {
+                    if (this.eatCooldown <= 0 && this.random.nextInt(300) == 0) {
+                        this.eatAnimationState.start(this.tickCount);
+                        this.idleAnimationState.stop();
+                        this.eatCooldown = 100; // eat duration
+                    }
+                }
             }
         }
 
+        // Tick down the eat cooldown
         if (this.eatCooldown > 0) {
             this.eatCooldown--;
         }
@@ -534,6 +567,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             this.eatAnimationState.stop();
         }
     }
+
 
     // Checks if the Hell Hippo is currently moving horizontally.
     public boolean isMoving() {
