@@ -24,10 +24,12 @@ public class HellHippoWaterStrollGoal extends Goal {
         return this.mob.isInWater() && this.mob.onGround();
     }
 
+    private int impulseCooldown = 20; // Start at 1 second
+
     @Override
     public void tick() {
         if (--cooldownTicks <= 0) {
-            cooldownTicks = 40 + this.mob.getRandom().nextInt(40); // Cada 2-4 segundos
+            cooldownTicks = 40 + this.mob.getRandom().nextInt(40); // Random move cada 2-4 segundos
             Vec3 randomPos = getRandomWaterSurfacePos();
             if (randomPos != null) {
                 Path path = this.mob.getNavigation().createPath(BlockPos.containing(randomPos), 1);
@@ -36,7 +38,18 @@ public class HellHippoWaterStrollGoal extends Goal {
                 }
             }
         }
+
+        if (this.mob.isInWater() && !this.mob.getNavigation().isDone()) {
+            if (--impulseCooldown <= 0) {
+                Vec3 velocity = this.mob.getDeltaMovement();
+                this.mob.setDeltaMovement(velocity.x, 0.35D, velocity.z); // Impulso leve hacia arriba
+                impulseCooldown = 20; // Cada 20 ticks = 1 segundo exacto
+            }
+        }
     }
+
+
+
 
     private Vec3 getRandomWaterSurfacePos() {
         Vec3 basePos = this.mob.position();
