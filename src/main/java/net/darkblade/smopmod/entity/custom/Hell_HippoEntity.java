@@ -80,7 +80,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.steering = new ItemBasedSteering(this.entityData, DATA_BOOST_TIME, DATA_SADDLE_ID);
     }
 
-    private int idleAnimationTimeout = 0;
+
     public int attackAnimationTimeout = 0;
     private int intimidatingTicks = 0;
     private int staringTicks = 0;
@@ -491,7 +491,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     @Override
     protected PathNavigation createNavigation(Level world) {
-        return new WaterBoundPathNavigation(this, world);
+        return new GroundPathNavigation(this, world);
     }
     @Override
     public boolean canBreatheUnderwater() {
@@ -513,21 +513,31 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState sprintAnimationState = new AnimationState();
     public final AnimationState waterIdleAnimationState = new AnimationState();
 
-
-
     private void setupAnimationStates() {
+        if (this.isAttacking()) {
+            if (!this.attackAnimationState.isStarted()) {
+                this.attackAnimationState.start(this.tickCount);
+                this.attackAnimationTimeout = 20; // duración visual del ataque
+            }
+        } else {
+            if (this.attackAnimationState.isStarted() && this.attackAnimationTimeout <= 0) {
+                this.attackAnimationState.stop();
+            }
+        }
 
-        // Idle / Walk / Swim / WaterIdle / Sprint animation logic
+        if (this.attackAnimationTimeout > 0) {
+            this.attackAnimationTimeout--;
+        }
+
         if (this.isInWaterOrBubble()) {
             if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-                if (!this.attackAnimationState.isStarted() && !this.eatAnimationState.isStarted()) {
-                    if (!this.swimAnimationState.isStarted()) {
-                        this.swimAnimationState.start(this.tickCount);
-                    }
-                    this.walkAnimationState.stop();
-                    this.idleAnimationState.stop();
-                    this.waterIdleAnimationState.stop();
+                if (!this.swimAnimationState.isStarted()) {
+                    this.swimAnimationState.start(this.tickCount);
                 }
+                this.walkAnimationState.stop();
+                this.idleAnimationState.stop();
+                this.waterIdleAnimationState.stop();
+                this.eatAnimationState.stop();
             } else {
                 if (!this.waterIdleAnimationState.isStarted()) {
                     this.waterIdleAnimationState.start(this.tickCount);
@@ -535,49 +545,46 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 this.walkAnimationState.stop();
                 this.swimAnimationState.stop();
                 this.idleAnimationState.stop();
+                this.eatAnimationState.stop();
             }
         } else {
             if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
                 if (this.isSprinting()) {
-                    // Sprinting
                     if (!this.sprintAnimationState.isStarted()) {
                         this.sprintAnimationState.start(this.tickCount);
-                        this.walkAnimationState.stop();
-                        this.idleAnimationState.stop();
-                        this.waterIdleAnimationState.stop();
-                        this.eatAnimationState.stop();
                     }
+                    this.walkAnimationState.stop();
+                    this.idleAnimationState.stop();
+                    this.waterIdleAnimationState.stop();
+                    this.eatAnimationState.stop();
                 } else {
-                    // Walking normally
                     if (!this.walkAnimationState.isStarted()) {
                         this.walkAnimationState.start(this.tickCount);
-                        this.sprintAnimationState.stop();
-                        this.idleAnimationState.stop();
-                        this.waterIdleAnimationState.stop();
-                        this.eatAnimationState.stop();
                     }
+                    this.sprintAnimationState.stop();
+                    this.idleAnimationState.stop();
+                    this.waterIdleAnimationState.stop();
+                    this.eatAnimationState.stop();
                 }
             } else {
-                // Idle / Eat
                 if (!this.idleAnimationState.isStarted() && !this.eatAnimationState.isStarted()) {
                     this.idleAnimationState.start(this.tickCount);
-                    this.walkAnimationState.stop();
-                    this.sprintAnimationState.stop();
-                    this.waterIdleAnimationState.stop();
-                    this.swimAnimationState.stop();
                 }
+                this.walkAnimationState.stop();
+                this.sprintAnimationState.stop();
+                this.waterIdleAnimationState.stop();
+                this.swimAnimationState.stop();
 
                 if (this.onGround() && !this.isInWater() && !this.isSleeping() && !this.isAttacking()) {
                     if (this.eatCooldown <= 0 && this.random.nextInt(300) == 0) {
                         this.eatAnimationState.start(this.tickCount);
                         this.idleAnimationState.stop();
-                        this.eatCooldown = 100; // eat duration
+                        this.eatCooldown = 100;
                     }
                 }
             }
         }
 
-        // Tick down the eat cooldown
         if (this.eatCooldown > 0) {
             this.eatCooldown--;
         }
@@ -592,7 +599,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public boolean isMoving() {
         return this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6D;
     }
-
 
     // ───────────────────────────────────────────────────── Sounds ─────
 
@@ -686,6 +692,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.goalSelector.addGoal(2, new TemptGoal(this, 1.2, Ingredient.of(new ItemLike[]{Items.CARROT_ON_A_STICK}), false));
 
         this.goalSelector.addGoal(2, new HellHippoWaterStrollGoal(this, 2.0));
+
         this.goalSelector.addGoal(6,new FollowParentGoal(this, 1.1D));
         this.goalSelector.addGoal(7, new RandomStrollGoal(this, 1.1D));
         this.goalSelector.addGoal(8,new LookAtPlayerGoal(this, Player.class, 3f));
