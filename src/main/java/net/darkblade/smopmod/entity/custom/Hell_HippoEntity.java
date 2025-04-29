@@ -2,9 +2,7 @@ package net.darkblade.smopmod.entity.custom;
 
 import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.entity.ModEntities;
-import net.darkblade.smopmod.entity.ai.HellHippoDefendOwnerGoal;
-import net.darkblade.smopmod.entity.ai.HellHippoFloatGoal;
-import net.darkblade.smopmod.entity.ai.Hell_HippoAttackGoal;
+import net.darkblade.smopmod.entity.ai.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,6 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -31,6 +30,9 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
@@ -136,6 +138,14 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     }
                 }
             }
+
+            // <<<<< SOLUCIÓN para que SE HUNDA
+            if (this.isInWater() && !this.isInLove() && !this.isVehicle()) {
+                Vec3 velocity = this.getDeltaMovement();
+                // Forzar caída leve constante
+                this.setDeltaMovement(velocity.x, velocity.y - 0.03D, velocity.z);
+                this.hasImpulse = true;
+            }
         }
 
         if (this.isSleeping()) {
@@ -179,7 +189,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
         }
     }
-
 
     // ───────────────────────────────────────────────────── Fear System ─────
 
@@ -476,13 +485,22 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     // ───────────────────────────────────────────────────── Animations ─────
 
     @Override
-    public double getFluidJumpThreshold() {
-        return 0.2F; // Baja para que no salte tanto el agua
+    public boolean isPushedByFluid() {
+        return false;
     }
 
     @Override
+    protected PathNavigation createNavigation(Level world) {
+        return new WaterBoundPathNavigation(this, world);
+    }
+    @Override
     public boolean canBreatheUnderwater() {
         return true;
+    }
+
+    @Override
+    public double getFluidJumpThreshold() {
+        return Double.MAX_VALUE; // NO saltos en agua nunca
     }
 
     private int eatCooldown = 0; // Cooldown interno para comer
@@ -495,27 +513,28 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState sprintAnimationState = new AnimationState();
     public final AnimationState waterIdleAnimationState = new AnimationState();
 
+
+
     private void setupAnimationStates() {
+
         // Idle / Walk / Swim / WaterIdle / Sprint animation logic
         if (this.isInWaterOrBubble()) {
             if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-                // Swim
-                if (!this.attackAnimationState.isStarted()) {
-                    this.swimAnimationState.start(this.tickCount);
+                if (!this.attackAnimationState.isStarted() && !this.eatAnimationState.isStarted()) {
+                    if (!this.swimAnimationState.isStarted()) {
+                        this.swimAnimationState.start(this.tickCount);
+                    }
                     this.walkAnimationState.stop();
                     this.idleAnimationState.stop();
                     this.waterIdleAnimationState.stop();
-                    this.eatAnimationState.stop();
                 }
             } else {
-                // WaterIdle
                 if (!this.waterIdleAnimationState.isStarted()) {
                     this.waterIdleAnimationState.start(this.tickCount);
-                    this.swimAnimationState.stop();
-                    this.walkAnimationState.stop();
-                    this.idleAnimationState.stop();
-                    this.eatAnimationState.stop();
                 }
+                this.walkAnimationState.stop();
+                this.swimAnimationState.stop();
+                this.idleAnimationState.stop();
             }
         } else {
             if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
@@ -659,7 +678,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(0, new HellHippoFloatGoal(this));
 
         this.goalSelector.addGoal(2, new Hell_HippoAttackGoal(this,1.0D, true));
 
@@ -667,11 +685,11 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.goalSelector.addGoal(2,new TemptGoal(this, 1.2D, Ingredient.of(Items.BEEF),false));
         this.goalSelector.addGoal(2, new TemptGoal(this, 1.2, Ingredient.of(new ItemLike[]{Items.CARROT_ON_A_STICK}), false));
 
-
-        this.goalSelector.addGoal(3,new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(4, new RandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(5,new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(6,new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(2, new HellHippoWaterStrollGoal(this, 2.0));
+        this.goalSelector.addGoal(6,new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(7, new RandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(8,new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(9,new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(0, new HellHippoDefendOwnerGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
