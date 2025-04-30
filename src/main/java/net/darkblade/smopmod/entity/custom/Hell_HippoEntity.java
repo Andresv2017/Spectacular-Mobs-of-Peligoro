@@ -158,6 +158,24 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 }
             }
 
+            // Reset sprinting logic
+            if (!this.level().isClientSide) {
+                boolean isMounted = this.isVehicle();
+                boolean isChasing = this.getTarget() != null && this.getTarget().isAlive();
+
+                if (isMounted || isChasing) {
+                    this.setSprinting(true);
+                } else {
+                    this.setSprinting(false);
+                }
+
+                if (this.isSprinting()) {
+                    this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.3F); // sprint real
+                } else {
+                    this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.2F); // caminata normal
+                }
+            }
+
             // <<<<< SOLUCIÓN para que SE HUNDA
             if (this.isInWater() && !this.isInLove() && !this.isVehicle()) {
                 Vec3 velocity = this.getDeltaMovement();
@@ -662,7 +680,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
-
     // Checks if the Hell Hippo is currently moving horizontally.
     public boolean isMoving() {
         return this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6D;
@@ -768,9 +785,8 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
         this.targetSelector.addGoal(0, new HellHippoDefendOwnerGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Animal.class, false, PREY_SELECTOR));
-
+        this.targetSelector.addGoal(2, new HippoTargetPlayerGoal(this));
+        this.targetSelector.addGoal(3, new HippoTargetPreyGoal(this, PREY_SELECTOR));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
