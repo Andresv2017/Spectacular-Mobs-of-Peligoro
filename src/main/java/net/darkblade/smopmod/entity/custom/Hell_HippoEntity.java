@@ -82,12 +82,14 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.steering = new ItemBasedSteering(this.entityData, DATA_BOOST_TIME, DATA_SADDLE_ID);
     }
 
-
     public int attackAnimationTimeout = 0;
     private int intimidatingTicks = 0;
     private int staringTicks = 0;
     private int fearCooldownTicks = 0;
     private int mountedAttackCooldownTicks = 0;
+    private int biteAnimationTimeout = 0;
+    private ItemStack pendingFood = ItemStack.EMPTY;
+    private Player feedingPlayer = null;
 
     private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
     private static final int MOUNTED_ATTACK_COOLDOWN = 40;
@@ -102,23 +104,20 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             // Cooldown Fear BossBar
             if (fearCooldownTicks > 0) {
                 fearCooldownTicks--;
-                fearCooldownBossBar.setProgress(Math.max(0.0F, (float) fearCooldownTicks / (float) FEAR_COOLDOWN_DURATION));
-
+                fearCooldownBossBar.setProgress(Math.max(0.0F, (float) fearCooldownTicks / FEAR_COOLDOWN_DURATION));
                 ServerPlayer rider = this.getRiderPlayer();
                 fearCooldownBossBar.removeAllPlayers();
-                if (rider != null) {
-                    fearCooldownBossBar.addPlayer(rider);
-                }
+                if (rider != null) fearCooldownBossBar.addPlayer(rider);
             } else {
                 fearCooldownBossBar.setProgress(0.0F);
                 fearCooldownBossBar.setVisible(false);
                 fearCooldownBossBar.removeAllPlayers();
             }
+
             // Cooldown Attack BossBar
             if (mountedAttackCooldownTicks > 0) {
                 mountedAttackCooldownTicks--;
-                mountedAttackBossBar.setProgress(Math.max(0.0F, (float) mountedAttackCooldownTicks / (float) MOUNTED_ATTACK_COOLDOWN));
-
+                mountedAttackBossBar.setProgress(Math.max(0.0F, (float) mountedAttackCooldownTicks / MOUNTED_ATTACK_COOLDOWN));
                 ServerPlayer rider = this.getRiderPlayer();
                 mountedAttackBossBar.removeAllPlayers();
                 if (rider != null) {
@@ -134,62 +133,49 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             if (this.isIntimidating()) {
                 if (this.intimidatingTicks > 0) {
                     this.intimidatingTicks--;
-                } else {
-                    if (!this.isSleeping()) {
-                        this.setIntimidating(false);
-                        this.setTrusting(false);
-                        this.trustingPlayerUUID = null;
-                        Player player = this.level().getNearestPlayer(this, 10);
-                        if (player != null) {
-                            player.displayClientMessage(Component.literal("§cHell Hippo has calmed down and forgotten your trust."), true);
-                        }
+                } else if (!this.isSleeping()) {
+                    this.setIntimidating(false);
+                    this.setTrusting(false);
+                    this.trustingPlayerUUID = null;
+                    Player player = this.level().getNearestPlayer(this, 10);
+                    if (player != null) {
+                        player.displayClientMessage(Component.literal("§cHell Hippo has calmed down and forgotten your trust."), true);
                     }
                 }
             }
 
-            // Sleeping check
+            // Wake up logic
             if (this.isSleeping() && !this.hasEffect(MobEffects.WEAKNESS)) {
                 this.setSleeping(false);
                 if (this.trustingPlayerUUID != null) {
                     Player trustingPlayer = this.level().getPlayerByUUID(this.trustingPlayerUUID);
                     if (trustingPlayer != null) {
-                        trustingPlayer.displayClientMessage(Component.literal("\u00a7eHell Hippo wakes up."), true);
+                        trustingPlayer.displayClientMessage(Component.literal("§eHell Hippo wakes up."), true);
                     }
                 }
             }
 
-            // Reset sprinting logic
-            if (!this.level().isClientSide) {
-                boolean isMounted = this.isVehicle();
-                boolean isChasing = this.getTarget() != null && this.getTarget().isAlive();
+            // Sprint toggle and speed adjustment
+            boolean isMounted = this.isVehicle();
+            boolean isChasing = this.getTarget() != null && this.getTarget().isAlive();
+            this.setSprinting(isMounted || isChasing);
+            this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(this.isSprinting() ? 0.3F : 0.2F);
 
-                if (isMounted || isChasing) {
-                    this.setSprinting(true);
-                } else {
-                    this.setSprinting(false);
-                }
-
-                if (this.isSprinting()) {
-                    this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.3F); // sprint real
-                } else {
-                    this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.2F); // caminata normal
-                }
-            }
-
-            // <<<<< SOLUCIÓN para que SE HUNDA
+            // Sink logic
             if (this.isInWater() && !this.isInLove() && !this.isVehicle()) {
                 Vec3 velocity = this.getDeltaMovement();
-                // Forzar caída leve constante
                 this.setDeltaMovement(velocity.x, velocity.y - 0.03D, velocity.z);
                 this.hasImpulse = true;
             }
         }
 
+        // Sleeping disables all movement
         if (this.isSleeping()) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
         }
 
+        // Attack animation handling
         if (this.attackAnimationTimeout > 0) {
             this.attackAnimationTimeout--;
             if (this.attackAnimationTimeout == 0) {
@@ -197,23 +183,52 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
         }
 
+        // Bite animation handling (feeding)
+        if (this.biteAnimationTimeout > 0) {
+            this.biteAnimationTimeout--;
+            if (this.biteAnimationTimeout == 0 && !this.level().isClientSide && !this.pendingFood.isEmpty()) {
+                if (this.getHealth() < this.getMaxHealth()) {
+                    this.heal(4.0F);
+                }
+
+                if (!this.isTrusting() && this.pendingFood.is(Items.BEEF)) {
+                    this.setTrusting(true);
+                    this.trustingPlayerUUID = this.feedingPlayer != null ? this.feedingPlayer.getUUID() : null;
+                    this.playSound(SoundEvents.HOGLIN_ANGRY, 1.0F, 1.0F);
+                }
+
+                if (this.feedingPlayer != null) {
+                    if (!this.feedingPlayer.getAbilities().instabuild) {
+                        this.pendingFood.shrink(1);
+                    }
+                    this.feedingPlayer.displayClientMessage(Component.literal("§aHell Hippo has eaten the food!"), true);
+                }
+
+                this.pendingFood = ItemStack.EMPTY;
+                this.feedingPlayer = null;
+                this.biteAnimationState.stop();
+            }
+        }
+
+        // Animations client-side
         if (this.level().isClientSide()) {
             setupAnimationStates();
         }
 
+        // Passive trust-check behavior
         if (!this.level().isClientSide() && this.isTrusting() && !this.isSaddled() && this.trustingPlayerUUID != null) {
             Player player = this.level().getPlayerByUUID(this.trustingPlayerUUID);
             if (player != null) {
                 double distance = this.distanceTo(player);
                 if (!this.isIntimidating() && distance < 10.0D && this.hasLineOfSight(player)) {
                     this.setIntimidating(true);
-                    this.intimidatingTicks = 300; // 15 seconds
-                    player.displayClientMessage(Component.literal("\u00a76Hell Hippo is now intimidating!"), true);
+                    this.intimidatingTicks = 300;
+                    player.displayClientMessage(Component.literal("§6Hell Hippo is now intimidating!"), true);
                 }
+
                 if (this.isIntimidating()) {
                     Vec3 toEntity = this.position().subtract(player.position()).normalize();
                     double dot = player.getLookAngle().normalize().dot(toEntity);
-
                     if (dot > 0.95D) {
                         staringTicks++;
                         if (staringTicks >= 100) {
@@ -223,7 +238,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                             if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
                                 player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
                             }
-                            player.displayClientMessage(Component.literal("\u00a77You are terrified by the Hell Hippo!"), true);
+                            player.displayClientMessage(Component.literal("§7You are terrified by the Hell Hippo!"), true);
                             staringTicks = 0;
                         }
                     } else {
@@ -233,6 +248,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
         }
     }
+
 
     // ───────────────────────────────────────────────────── Fear System ─────
 
@@ -357,11 +373,27 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 return InteractionResult.SUCCESS;
             }
 
-            // Intento de montar
-            if (this.isSaddled() && !this.isVehicle() && !pPlayer.isSecondaryUseActive()) {
+            // Permitir alimentar con comida si está saddled
+            if (this.isSaddled() && itemstack.isEdible() && pPlayer.isShiftKeyDown()) {
+                if (!this.biteAnimationState.isStarted()) {
+                    this.pendingFood = itemstack.copy();
+                    this.feedingPlayer = pPlayer;
+                    this.level().broadcastEntityEvent(this, (byte) 42); // ← nuevo byte para bite anim
+                    this.biteAnimationTimeout = 20;
+                    pPlayer.displayClientMessage(Component.literal("§eHell Hippo is eating..."), true);
+                    return InteractionResult.SUCCESS;
+                } else {
+                    pPlayer.displayClientMessage(Component.literal("§cWait, still chewing..."), true);
+                    return InteractionResult.CONSUME;
+                }
+            }
+
+            // Intento de montar (solo si no está usando item de comida)
+            if (this.isSaddled() && !this.isVehicle() && !itemstack.isEdible() && !pPlayer.isSecondaryUseActive()) {
                 pPlayer.startRiding(this);
                 return InteractionResult.SUCCESS;
             }
+
         }
 
         return super.mobInteract(pPlayer, pHand);
@@ -515,7 +547,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
-
     private LivingEntity findNearestAttackableTarget() {
         double range = 2.0D;
         Vec3 forward = this.getLookAngle().normalize();
@@ -598,8 +629,25 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState swimAnimationState = new AnimationState();
     public final AnimationState sprintAnimationState = new AnimationState();
     public final AnimationState waterIdleAnimationState = new AnimationState();
+    public final AnimationState biteAnimationState = new AnimationState();
 
     private void setupAnimationStates() {
+        if (this.biteAnimationState.isStarted()) {
+            if (this.biteAnimationTimeout > 0) {
+                // Mientras la animación está activa, bloquea otras
+                this.attackAnimationState.stop();
+                this.walkAnimationState.stop();
+                this.swimAnimationState.stop();
+                this.waterIdleAnimationState.stop();
+                this.idleAnimationState.stop();
+                this.sprintAnimationState.stop();
+                this.eatAnimationState.stop();
+                return;
+            } else {
+                // Forzar stop si se quedó colgada
+                this.biteAnimationState.stop();
+            }
+        }
         if (this.isAttacking()) {
             if (!this.attackAnimationState.isStarted()) {
                 this.attackAnimationState.start(this.tickCount);
@@ -814,6 +862,16 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
         }
     }
+
+    @Override
+    public void handleEntityEvent(byte id) {
+        super.handleEntityEvent(id);
+        if (id == 42) {
+            this.biteAnimationState.start(this.tickCount);
+            this.biteAnimationTimeout = 20; // duración de animación
+        }
+    }
+
 
     // ───────────────────────────────────────────────────── Static Block ─────
 
