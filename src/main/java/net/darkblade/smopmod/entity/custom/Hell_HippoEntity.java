@@ -49,6 +49,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -68,6 +69,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     private final ItemBasedSteering steering;
     private final ServerBossEvent fearCooldownBossBar = new ServerBossEvent( Component.literal("Fear Cooldown"), BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
+    private final ServerBossEvent mountedAttackBossBar = new ServerBossEvent(Component.literal("Mounted Attack Cooldown"), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
     public UUID trustingPlayerUUID;
 
     public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
@@ -85,8 +87,10 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private int intimidatingTicks = 0;
     private int staringTicks = 0;
     private int fearCooldownTicks = 0;
+    private int mountedAttackCooldownTicks = 0;
 
     private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
+    private static final int MOUNTED_ATTACK_COOLDOWN = 40;
 
     // ───────────────────────────────────────────────────── Tick ─────
 
@@ -109,6 +113,21 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 fearCooldownBossBar.setProgress(0.0F);
                 fearCooldownBossBar.setVisible(false);
                 fearCooldownBossBar.removeAllPlayers();
+            }
+            // Cooldown Attack BossBar
+            if (mountedAttackCooldownTicks > 0) {
+                mountedAttackCooldownTicks--;
+                mountedAttackBossBar.setProgress(Math.max(0.0F, (float) mountedAttackCooldownTicks / (float) MOUNTED_ATTACK_COOLDOWN));
+
+                ServerPlayer rider = this.getRiderPlayer();
+                mountedAttackBossBar.removeAllPlayers();
+                if (rider != null) {
+                    mountedAttackBossBar.addPlayer(rider);
+                    mountedAttackBossBar.setVisible(true);
+                }
+            } else {
+                mountedAttackBossBar.setVisible(false);
+                mountedAttackBossBar.removeAllPlayers();
             }
 
             // Intimidation timer
@@ -151,6 +170,13 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (this.isSleeping()) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
+        }
+
+        if (this.attackAnimationTimeout > 0) {
+            this.attackAnimationTimeout--;
+            if (this.attackAnimationTimeout == 0) {
+                this.setAttacking(false);
+            }
         }
 
         if (this.level().isClientSide()) {
@@ -238,10 +264,14 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (this.isFearOnCooldown()) {
             this.fearCooldownBossBar.addPlayer(player);
         }
+        if (this.mountedAttackCooldownTicks > 0) {
+            this.mountedAttackBossBar.addPlayer(player);
+        }
     }
 
     public void stopSeenBy(ServerPlayer player) {
         this.fearCooldownBossBar.removePlayer(player);
+        this.mountedAttackBossBar.removePlayer(player);
     }
 
     @Nullable
@@ -345,11 +375,19 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
-    protected void tickRidden(Player pPlayer, Vec3 pTravelVector) {
-        super.tickRidden(pPlayer, pTravelVector);
-        this.setRot(pPlayer.getYRot(), pPlayer.getXRot() * 0.5F);
+    @Override
+    protected void tickRidden(Player rider, Vec3 travelVector) {
+        super.tickRidden(rider, travelVector);
+        this.setRot(rider.getYRot(), rider.getXRot() * 0.5F);
         this.yRotO = this.yBodyRot = this.yHeadRot = this.getYRot();
         this.steering.tickBoost();
+
+        // 🚀 Sprint logic for animation
+        if (this.getDeltaMovement().horizontalDistanceSqr() > 0.03D) {
+            this.setSprinting(true);
+        } else {
+            this.setSprinting(false);
+        }
     }
 
     protected Vec3 getRiddenInput(Player pPlayer, Vec3 pTravelVector) {return new Vec3(0.0, 0.0, 1.0);}
@@ -419,16 +457,46 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     // ───────────────────────────────────────────────────── Attack System ─────
 
     public void performMountedAttack(Player player) {
-        LivingEntity target = this.findNearestAttackableTarget();
+        if (this.mountedAttackCooldownTicks > 0) return;
+
+        Vec3 eyePos = this.getEyePosition();
+        Vec3 lookVec = this.getLookAngle();
+        Vec3 reachEnd = eyePos.add(lookVec.scale(5.5));
+        AABB attackBox = this.getBoundingBox().expandTowards(lookVec.scale(5.5)).inflate(1.0);
+
+        List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class, attackBox,
+                e -> e != this && e != player && e.isAlive() && this.hasLineOfSight(e));
+
+        LivingEntity target = null;
+        double closest = Double.MAX_VALUE;
+
+        for (LivingEntity entity : targets) {
+            AABB entityBox = entity.getBoundingBox().inflate(0.3);
+            Optional<Vec3> hit = entityBox.clip(eyePos, reachEnd);
+            if (hit.isPresent()) {
+                double dist = eyePos.distanceToSqr(hit.get());
+                if (dist < closest) {
+                    closest = dist;
+                    target = entity;
+                }
+            }
+        }
+
+        this.swing(InteractionHand.MAIN_HAND);
+        this.setAttacking(true);
+        this.attackAnimationTimeout = 20;
+        this.mountedAttackCooldownTicks = 40;
+
         if (target != null) {
-            this.swing(InteractionHand.MAIN_HAND);
-            target.hurt(this.damageSources().mobAttack(this), (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
-            player.displayClientMessage(Component.literal("\u00a76Hell Hippo attacks!"), true);
+            target.hurt(this.damageSources().mobAttack(this),
+                    (float)this.getAttributeValue(Attributes.ATTACK_DAMAGE));
+            player.displayClientMessage(Component.literal("\u00a76Hell Hippo attacks (hit)!"), true);
         } else {
             this.playSound(SoundEvents.HOGLIN_ANGRY, 1.0F, 1.0F);
-            player.displayClientMessage(Component.literal("\u00a7cNo target found to attack."), true);
+            player.displayClientMessage(Component.literal("\u00a7eHell Hippo swings but hits nothing."), true);
         }
     }
+
 
     private LivingEntity findNearestAttackableTarget() {
         double range = 2.0D;
@@ -710,6 +778,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 .add(Attributes.MAX_HEALTH,20.0)
                 .add(Attributes.FOLLOW_RANGE,24D)
                 .add(Attributes.MOVEMENT_SPEED, 0.250)
+                .add(Attributes.ATTACK_SPEED, 0.250)
                 .add(Attributes.ARMOR_TOUGHNESS, 0.1f)
                 .add(Attributes.ATTACK_KNOCKBACK, 0.5f)
                 .add(Attributes.ATTACK_DAMAGE, 2f);
