@@ -17,7 +17,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -29,10 +28,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
-import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
@@ -160,6 +157,13 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             boolean isChasing = this.getTarget() != null && this.getTarget().isAlive();
             this.setSprinting(isMounted || isChasing);
             this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(this.isSprinting() ? 0.3F : 0.2F);
+
+            // Detener movimiento durante intimidación
+            if (this.isIntimidating()) {
+                this.setDeltaMovement(Vec3.ZERO);
+                this.navigation.stop();
+                this.getLookControl().setLookAt(this, 10.0F, 10.0F); // opcional: mirada fija
+            }
 
             // Sink logic
             if (this.isInWater() && !this.isInLove() && !this.isVehicle()) {
@@ -621,6 +625,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     }
 
     private int eatCooldown = 0; // Cooldown interno para comer
+    private int lastIntimidateAnimationTick = -1;
 
     public final AnimationState eatAnimationState = new AnimationState();
     public final AnimationState idleAnimationState = new AnimationState();
@@ -630,6 +635,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState sprintAnimationState = new AnimationState();
     public final AnimationState waterIdleAnimationState = new AnimationState();
     public final AnimationState biteAnimationState = new AnimationState();
+    public final AnimationState intimidateAnimationState = new AnimationState();
 
     private void setupAnimationStates() {
         if (this.biteAnimationState.isStarted()) {
@@ -647,6 +653,24 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 // Forzar stop si se quedó colgada
                 this.biteAnimationState.stop();
             }
+        }
+        if (this.isIntimidating()) {
+            if (!this.intimidateAnimationState.isStarted() || this.tickCount - lastIntimidateAnimationTick >= 150) {
+                this.intimidateAnimationState.start(this.tickCount);
+                lastIntimidateAnimationTick = this.tickCount;
+                this.playSound(SoundEvents.RAVAGER_ROAR, 1.0F, 1.0F); // ← Puedes cambiar este sonido
+            }
+            this.attackAnimationState.stop();
+            this.walkAnimationState.stop();
+            this.swimAnimationState.stop();
+            this.waterIdleAnimationState.stop();
+            this.idleAnimationState.stop();
+            this.sprintAnimationState.stop();
+            this.eatAnimationState.stop();
+            this.biteAnimationState.stop();
+            return;
+        } else {
+            this.intimidateAnimationState.stop();
         }
         if (this.isAttacking()) {
             if (!this.attackAnimationState.isStarted()) {
