@@ -28,6 +28,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.Animal;
@@ -77,6 +78,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public Hell_HippoEntity(EntityType<? extends Animal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
         this.steering = new ItemBasedSteering(this.entityData, DATA_BOOST_TIME, DATA_SADDLE_ID);
+        this.setMaxUpStep(2.0F); // o incluso 2.0F para test
     }
 
     public int attackAnimationTimeout = 0;
@@ -612,7 +614,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     @Override
     protected PathNavigation createNavigation(Level world) {
-        return new GroundPathNavigation(this, world);
+        return new AmphibiousPathNavigation(this, world);
     }
     @Override
     public boolean canBreatheUnderwater() {
@@ -636,6 +638,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public final AnimationState waterIdleAnimationState = new AnimationState();
     public final AnimationState biteAnimationState = new AnimationState();
     public final AnimationState intimidateAnimationState = new AnimationState();
+    public final AnimationState shakeAnimationState = new AnimationState();
 
     private void setupAnimationStates() {
         if (this.biteAnimationState.isStarted()) {
@@ -845,15 +848,15 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.goalSelector.addGoal(2, new Hell_HippoAttackGoal(this,1.0D, true));
 
         this.goalSelector.addGoal(1,new BreedGoal(this, 1.15D));
-        this.goalSelector.addGoal(2,new TemptGoal(this, 1.2D, Ingredient.of(Items.BEEF),false));
-        this.goalSelector.addGoal(2, new TemptGoal(this, 1.2, Ingredient.of(new ItemLike[]{Items.CARROT_ON_A_STICK}), false));
+        this.goalSelector.addGoal(2, new HellHippoTemptGoal(this, 1.2D, Ingredient.of(Items.CARROT_ON_A_STICK, Items.BEEF)));
 
         this.goalSelector.addGoal(2, new HellHippoWaterStrollGoal(this, 2.0));
 
         this.goalSelector.addGoal(6,new FollowParentGoal(this, 1.1D));
         this.goalSelector.addGoal(7, new RandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(8,new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(9,new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(8, new HellHippoLeaveWaterShakeGoal(this));
+        this.goalSelector.addGoal(9,new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(10,new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(0, new HellHippoDefendOwnerGoal(this));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));

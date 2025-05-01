@@ -160,6 +160,7 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		this.animate(((Hell_HippoEntity) entity).eatAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.eat, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).biteAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.bite, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).intimidateAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.intimidate, ageInTicks, 1f);
+		this.animate(((Hell_HippoEntity) entity).shakeAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.shake, ageInTicks, 1f);
 
 	}
 
