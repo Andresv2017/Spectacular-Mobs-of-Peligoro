@@ -181,6 +181,32 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             return;
         }
 
+        // === Water exit shake logic ===
+        if (this.isInWaterRainOrBubble()) {
+            this.isWet = true;
+            this.shakeTicks = 0;
+        } else if (this.isWet && !this.isShaking && this.onGround()) {
+            this.isShaking = true;
+            this.shakeTicks = 0;
+            this.level().broadcastEntityEvent(this, (byte) 60); // para iniciar animación en cliente
+        }
+
+        if (this.isShaking) {
+            this.shakeTicks++;
+            this.setDeltaMovement(Vec3.ZERO); // Se mantiene quieto durante sacudida
+
+            if (this.shakeTicks == 1) {
+                this.playSound(SoundEvents.WOLF_SHAKE, 1.0F, 1.0F); // o tu sonido personalizado
+                this.shakeAnimationState.start(this.tickCount);
+            }
+
+            if (this.shakeTicks >= 70) {
+                this.isWet = false;
+                this.isShaking = false;
+                this.shakeAnimationState.stop();
+            }
+        }
+
         // Attack animation handling
         if (this.attackAnimationTimeout > 0) {
             this.attackAnimationTimeout--;
@@ -408,6 +434,17 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     // ───────────────────────────────────────────────────── Saddle System ─────
 
     @Override
+    public void positionRider(Entity passenger, MoveFunction moveFunction) {
+        super.positionRider(passenger, moveFunction);
+        if (passenger instanceof LivingEntity) {
+            Vec3 offset = new Vec3(0.0D, 1.55D, 0.0D); // 🔽 Baja al jinete 0.3 bloques
+            Vec3 pos = this.position();
+            moveFunction.accept(passenger, pos.x + offset.x, pos.y + offset.y, pos.z + offset.z);
+
+        }
+    }
+
+    @Override
     public boolean boost() {return this.steering.boost(this.getRandom());}
 
     @Override
@@ -604,6 +641,14 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
         return super.canAttack(target);
     }
+
+    //───────────────────────────────────────────────────── Shake ─────
+
+    private boolean isWet;
+    private boolean isShaking;
+    private int shakeTicks;
+    private int waterTicks;
+
 
     // ───────────────────────────────────────────────────── Animations ─────
 
@@ -850,11 +895,10 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.goalSelector.addGoal(1,new BreedGoal(this, 1.15D));
         this.goalSelector.addGoal(2, new HellHippoTemptGoal(this, 1.2D, Ingredient.of(Items.CARROT_ON_A_STICK, Items.BEEF)));
 
-        this.goalSelector.addGoal(2, new HellHippoWaterStrollGoal(this, 2.0));
+        //this.goalSelector.addGoal(2, new HellHippoWaterStrollGoal(this, 2.0));
 
         this.goalSelector.addGoal(6,new FollowParentGoal(this, 1.1D));
         this.goalSelector.addGoal(7, new RandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(8, new HellHippoLeaveWaterShakeGoal(this));
         this.goalSelector.addGoal(9,new LookAtPlayerGoal(this, Player.class, 3f));
         this.goalSelector.addGoal(10,new RandomLookAroundGoal(this));
 
@@ -892,13 +936,17 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     @Override
     public void handleEntityEvent(byte id) {
-        super.handleEntityEvent(id);
         if (id == 42) {
             this.biteAnimationState.start(this.tickCount);
             this.biteAnimationTimeout = 20; // duración de animación
+        } else if (id == 60) {
+            this.isShaking = true;
+            this.shakeTicks = 0;
+            this.shakeAnimationState.start(this.tickCount);
+        } else {
+            super.handleEntityEvent(id);
         }
     }
-
 
     // ───────────────────────────────────────────────────── Static Block ─────
 

@@ -12,6 +12,7 @@ public class HellHippoLeaveWaterShakeGoal extends Goal {
     private final Level level;
     private int waterTicks;
     private int shakeTicks;
+    private boolean shouldShake;
 
     public HellHippoLeaveWaterShakeGoal(Hell_HippoEntity hippo) {
         this.hippo = hippo;
@@ -20,49 +21,48 @@ public class HellHippoLeaveWaterShakeGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return hippo.isInWater() && !hippo.isVehicle() && hippo.onGround();
+        // Inicia si ha salido del agua Y había estado en agua más de 5s
+        return !hippo.isInWater() && shouldShake;
     }
 
     @Override
     public void start() {
         this.hippo.getNavigation().stop();
         this.hippo.setDeltaMovement(Vec3.ZERO);
-        ((Hell_HippoEntity) this.hippo).shakeAnimationState.start(this.hippo.tickCount);
         this.shakeTicks = 70;
+        hippo.shakeAnimationState.start(hippo.tickCount);
 
-        // ✅ Muestra el mensaje si hay jinete
-        if (this.hippo.getControllingPassenger() instanceof ServerPlayer rider) {
+        if (hippo.getControllingPassenger() instanceof ServerPlayer rider) {
             rider.displayClientMessage(Component.literal("§bHell Hippo is shaking off water!"), true);
         }
     }
 
+    @Override
+    public boolean canContinueToUse() {
+        return shakeTicks > 0;
+    }
 
     @Override
     public void stop() {
         waterTicks = 0;
         shakeTicks = 0;
+        shouldShake = false;
         hippo.shakeAnimationState.stop();
     }
 
     @Override
-    public boolean canContinueToUse() {
-        return true;
-    }
-
-    @Override
     public void tick() {
+        // Si está en el agua, cuenta ticks
         if (hippo.isInWater()) {
             waterTicks++;
-        } else if (waterTicks >= 100 && shakeTicks < 70) { // 5s en agua + 3.5s quieto
-            if (shakeTicks == 0) {
-                hippo.shakeAnimationState.start(hippo.tickCount);
-                hippo.getNavigation().stop();
-                hippo.setDeltaMovement(Vec3.ZERO);
-                if (hippo.getControllingPassenger() instanceof ServerPlayer rider) {
-                    rider.displayClientMessage(Component.literal("§bHell Hippo is shaking off water!"), true);
-                }
+            if (waterTicks >= 100) {
+                shouldShake = true;
             }
-            shakeTicks++;
+        }
+
+        // Si salimos y toca agitarse
+        if (shouldShake && !hippo.isInWater() && shakeTicks > 0) {
+            shakeTicks--;
             hippo.setDeltaMovement(Vec3.ZERO);
         }
     }
