@@ -161,7 +161,10 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		this.animate(((Hell_HippoEntity) entity).biteAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.bite, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).intimidateAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.intimidate, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).shakeAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.shake, ageInTicks, 1f);
-
+		this.animate(((Hell_HippoEntity) entity).sleepPreparingAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.shake, ageInTicks, 1f);
+		this.animate(((Hell_HippoEntity) entity).sleepAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.bite, ageInTicks, 1f);
+		this.animate(((Hell_HippoEntity) entity).awakeningAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.eat, ageInTicks, 1f);
+		this.animate(((Hell_HippoEntity) entity).deathAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.death, ageInTicks, 1f);
 	}
 
 	private void applyHeadRotation(float pNetHeadYaw, float pHeadPitch, float pAgeInTicks) {
