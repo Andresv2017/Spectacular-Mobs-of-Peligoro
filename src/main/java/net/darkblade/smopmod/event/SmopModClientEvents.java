@@ -13,7 +13,7 @@ import org.lwjgl.glfw.GLFW;
 public class SmopModClientEvents {
 
     public static final KeyMapping ATTACK_KEY = new KeyMapping("key.smopmod.attack", GLFW.GLFW_KEY_R, "key.categories.smopmod");
-    public static final KeyMapping FEAR_KEY = new KeyMapping("key.smopmod.fear", GLFW.GLFW_KEY_F, "key.categories.smopmod");
+    public static final KeyMapping FEAR_KEY = new KeyMapping("key.smopmod.fear", GLFW.GLFW_KEY_G, "key.categories.smopmod");
 
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {

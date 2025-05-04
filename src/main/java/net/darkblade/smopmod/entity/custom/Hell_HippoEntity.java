@@ -103,13 +103,13 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public void tick() {
         super.tick();
 
-        // 🔥 Ejecutar animación de muerte si está muriendo
+        // 🔥 Execute death animation
         if (this.isDeadOrDying()) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
         }
 
-        // Bloquear movimiento si está dormido o en transición
+        // Block movement if asleep or transitioning
         if (this.isPreparingSleep() || this.isSleeping() || this.isAwakening()) {
             this.setDeltaMovement(Vec3.ZERO);
         }
@@ -164,7 +164,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 this.intimidateAnimationState.stop();
 
                 //this.setDeltaMovement(Vec3.ZERO);
-                this.setPreparingSleep(true); // ← ahora correctamente
+                this.setPreparingSleep(true);
                 sleepPreparingTicks = 100;
 
                 Player p = this.level().getNearestPlayer(this, 10);
@@ -181,7 +181,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     this.setPreparingSleep(false);
                     this.setSleeping(true);
 
-                    // 🔧 Forzar animación en cliente
+                    // 🔧 Force animation on client.
                     if (this.level().isClientSide) {
                         this.sleepAnimationState.start(this.tickCount);
                     }
@@ -197,7 +197,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 this.setSleeping(false);
                 this.sleepAnimationState.stop();
                 this.awakeningTicks = 130;
-                this.setAwakening(true); // 🔄 nueva forma sincronizada
+                this.setAwakening(true);
                 Player p = this.level().getNearestPlayer(this, 10);
                 if (p != null) {
                     p.displayClientMessage(Component.literal("§e[HH] Hell Hippo is waking up..."), true);
@@ -207,7 +207,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             if (awakeningTicks > 0) {
                 awakeningTicks--;
                 if (awakeningTicks == 0) {
-                    this.setAwakening(false); // 🔄 apagar estado sincronizado
+                    this.setAwakening(false);
                     Player p = this.level().getNearestPlayer(this, 10);
                     if (p != null) {
                         p.displayClientMessage(Component.literal("§a[HH] Hell Hippo is now awake."), true);
@@ -223,7 +223,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             this.setSprinting(isMounted || isChasing);
             this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(this.isSprinting() ? 0.3F : 0.2F);
 
-            // Detener movimiento durante intimidación
+            // Stop movement during intimidation
             if (this.isIntimidating()) {
                 this.setDeltaMovement(Vec3.ZERO);
                 this.navigation.stop();
@@ -238,7 +238,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
         }
 
-        // Si sigue dormido, deten movimiento
         if (this.isSleeping()) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
@@ -345,20 +344,14 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             this.fearCooldownBossBar.setVisible(true);
 
             ServerPlayer rider = this.getRiderPlayer();
-            this.fearCooldownBossBar.removeAllPlayers(); // Limpiar
+            this.fearCooldownBossBar.removeAllPlayers();
             if (rider != null) {
                 this.fearCooldownBossBar.addPlayer(rider);
             }
         }
     }
 
-    public boolean isFearOnCooldown() {return fearCooldownTicks > 0;}
-
     public void performFearEffect(Player player) {
-        if (this.isFearOnCooldown()) {
-            // No mostrar mensaje ya que la BossBar indica el cooldown
-            return;
-        }
 
         double range = 10.0D;
         Vec3 pos = this.position();
@@ -375,7 +368,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
         }
 
-        // 🟡 Aquí activamos intimidación
         this.setIntimidating(true);
         this.intimidatingTicks = 60;
         this.lastIntimidateAnimationTick = -1;
@@ -386,20 +378,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         player.displayClientMessage(Component.literal("§9Hell Hippo unleashes FEAR!"), true);
 
         this.triggerFearCooldown();
-    }
-
-    public void startSeenBy(ServerPlayer player) {
-        if (this.isFearOnCooldown()) {
-            this.fearCooldownBossBar.addPlayer(player);
-        }
-        if (this.mountedAttackCooldownTicks > 0) {
-            this.mountedAttackBossBar.addPlayer(player);
-        }
-    }
-
-    public void stopSeenBy(ServerPlayer player) {
-        this.fearCooldownBossBar.removePlayer(player);
-        this.mountedAttackBossBar.removePlayer(player);
     }
 
     @Nullable
@@ -430,17 +408,16 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         ItemStack itemstack = pPlayer.getItemInHand(pHand);
 
         if (!this.level().isClientSide) {
-            // Intento de usar Saddle
+            // Attempt to use saddle
             if (itemstack.is(Items.SADDLE)) {
                 if (this.isSleeping() && this.trustingPlayerUUID != null && pPlayer.getUUID().equals(this.trustingPlayerUUID)) {
                     this.equipSaddle(SoundSource.PLAYERS);
-                    this.setSleeping(false); // 👈 Se despierta
-                    this.setIntimidating(false); // 👈 Deja de intimidar si estaba
-                    this.intimidatingTicks = 0;  // 👈 Resetea conteo intimidante
-                    this.awakeningTicks = 130; // 👈 inicia awakening
-                    this.setAwakening(true);   // 👈 nuevo estado
-                    this.removeEffect(MobEffects.WEAKNESS); // ✅ ← Elimina el efecto de debilidad
-                    // 🚫 NO tocar Trusting aquí: se mantiene confiado
+                    this.setSleeping(false);
+                    this.setIntimidating(false);
+                    this.intimidatingTicks = 0;
+                    this.awakeningTicks = 130;
+                    this.setAwakening(true);
+                    this.removeEffect(MobEffects.WEAKNESS); //
                     if (!pPlayer.getAbilities().instabuild) {
                         itemstack.shrink(1);
                     }
@@ -451,7 +428,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 }
             }
 
-            // Intento de alimentar
+            // Attempt to feed
             if (this.isFood(itemstack)) {
                 this.usePlayerItem(pPlayer, pHand, itemstack);
                 if (!this.isTrusting()) {
@@ -470,7 +447,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 return InteractionResult.SUCCESS;
             }
 
-            // Permitir alimentar con comida si está saddled
+            // Allow feeding with food if saddled
             if (this.isSaddled() && itemstack.isEdible() && pPlayer.isShiftKeyDown()) {
                 if (!this.biteAnimationState.isStarted()) {
                     this.pendingFood = itemstack.copy();
@@ -486,7 +463,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
 
             if (this.isSaddled() && !this.isVehicle() && !itemstack.isEdible() && !pPlayer.isSecondaryUseActive()) {
-                if (!this.isAwakening()) { // ✅ solo si no está despertando
+                if (!this.isAwakening()) {
                     pPlayer.startRiding(this);
                     return InteractionResult.SUCCESS;
                 } else {
@@ -505,7 +482,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public void positionRider(Entity passenger, MoveFunction moveFunction) {
         super.positionRider(passenger, moveFunction);
         if (passenger instanceof LivingEntity) {
-            Vec3 offset = new Vec3(0.0D, 1.55D, 0.0D); // 🔽 Baja al jinete 0.3 bloques
+            Vec3 offset = new Vec3(0.0D, 1.55D, 0.0D);
             Vec3 pos = this.position();
             moveFunction.accept(passenger, pos.x + offset.x, pos.y + offset.y, pos.z + offset.z);
 
@@ -517,7 +494,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (this.isIntimidating()) {
             this.setDeltaMovement(Vec3.ZERO);
             this.navigation.stop();
-            return; // ⛔ Ignora el movimiento completamente durante intimidación
+            return;
         }
 
         super.travel(travelVector);
@@ -670,35 +647,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
-    private LivingEntity findNearestAttackableTarget() {
-        double range = 2.0D;
-        Vec3 forward = this.getLookAngle().normalize();
-        Vec3 start = this.getEyePosition();
-        Vec3 end = start.add(forward.scale(range));
-
-        AABB searchBox = new AABB(start, end).inflate(0.5);
-
-        List<LivingEntity> candidates = this.level().getEntitiesOfClass(LivingEntity.class, searchBox,
-                (entity) -> entity.isAlive()
-                        && !(entity instanceof Hell_HippoEntity)
-                        && this.hasLineOfSight(entity)
-        );
-
-        return candidates.stream()
-                .min((e1, e2) -> Double.compare(this.distanceToSqr(e1), this.distanceToSqr(e2)))
-                .orElse(null);
-    }
-
-    public boolean canAttackTarget(LivingEntity target) {
-        if (this.isSaddled() && this.isTrusting() && this.getFirstPassenger() != null) {
-            return false; // No atacar si está confiado, ensillado y montado
-        }
-        if (this.isVehicle()) {
-            return false; // También no atacar si simplemente está montado
-        }
-        return true;
-    }
-
     public void setAttacking(boolean attacking) {
         this.entityData.set(ATTACKING, attacking);
     }
@@ -715,7 +663,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
             if (target instanceof TamableAnimal tamable) {
                 if (tamable.isOwnedBy(this.level().getPlayerByUUID(this.trustingPlayerUUID))) {
-                    return false; // no atacar mascotas de su dueño
+                    return false;
                 }
             }
         }
@@ -764,10 +712,10 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     @Override
     public double getFluidJumpThreshold() {
-        return Double.MAX_VALUE; // NO saltos en agua nunca
+        return Double.MAX_VALUE;
     }
 
-    private int eatCooldown = 0; // Cooldown interno para comer
+    private int eatCooldown = 0;
     private int lastIntimidateAnimationTick = -1;
 
     public final AnimationState eatAnimationState = new AnimationState();
@@ -941,13 +889,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             this.deathAnimationState.start(this.tickCount);
         }
     }
-
-
-    // Checks if the Hell Hippo is currently moving horizontally.
-    public boolean isMoving() {
-        return this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6D;
-    }
-
 
     // ───────────────────────────────────────────────────── Sounds ─────
 
