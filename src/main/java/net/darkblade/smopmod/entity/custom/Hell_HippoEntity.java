@@ -12,12 +12,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
@@ -41,6 +43,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
@@ -65,6 +68,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Boolean> DATA_PREPARING_SLEEP;
     private static final EntityDataAccessor<Boolean> DATA_AWAKENING;
     private static final EntityDataAccessor<Boolean> DATA_MALE;
+    private static final EntityDataAccessor<Boolean> DATA_SEAWEED;
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final Ingredient FOOD_ITEMS;
 
@@ -96,7 +100,10 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private Player feedingPlayer = null;
     private int sleepPreparingTicks = 0;
     private int awakeningTicks = 0;
-
+    private int seaweedTicks = 0;
+    private boolean isWet;
+    private boolean isShaking;
+    private int shakeTicks;
 
     private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
     private static final int MOUNTED_ATTACK_COOLDOWN = 40;
@@ -230,6 +237,19 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 this.setDeltaMovement(Vec3.ZERO);
                 this.navigation.stop();
                 this.getLookControl().setLookAt(this, 10.0F, 10.0F);
+            }
+
+            // Seaweed transform logic
+            if (!this.isSeaweed()) {
+                if (this.isFullySubmerged()) {
+                    this.seaweedTicks++;
+                    if (this.seaweedTicks >= 200) { // 10 segundos = 200 ticks
+                        this.setSeaweed(true);
+                        this.playSound(SoundEvents.TURTLE_EGG_HATCH, 1.0F, 1.0F);
+                    }
+                } else {
+                    this.seaweedTicks = 0;
+                }
             }
 
             // Sink logic
@@ -677,15 +697,11 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return super.canAttack(target);
     }
 
-    //───────────────────────────────────────────────────── Shake ─────
+    //───────────────────────────────────────────────────── Chest ─────
 
-    private boolean isWet;
-    private boolean isShaking;
-    private int shakeTicks;
 
-    //───────────────────────────────────────────────────── Sex ─────
 
-    // ─────────────────────────────────────── Synced Data
+    //───────────────────────────────────────────────────── Gender ─────
 
     public boolean isMale() {
         return this.entityData.get(DATA_MALE);
@@ -955,6 +971,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.define(DATA_PREPARING_SLEEP, false);
         this.entityData.define(DATA_AWAKENING, false);
         this.entityData.define(DATA_MALE, true);
+        this.entityData.define(DATA_SEAWEED, false);
     }
 
     public void addAdditionalSaveData(CompoundTag pCompound) {
@@ -1086,6 +1103,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         DATA_PREPARING_SLEEP = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_AWAKENING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_MALE = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+        DATA_SEAWEED = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.BEEF});
     }
 
@@ -1101,5 +1119,22 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     public boolean isFood(ItemStack stack) {
         return BREEDING_ITEM.test(stack); //
     }
+
+    // ───────────────────────────────────────────────────── Sea Weed ─────
+
+    public boolean isSeaweed() {
+        return this.entityData.get(DATA_SEAWEED);
+    }
+
+    public void setSeaweed(boolean value) {
+        this.entityData.set(DATA_SEAWEED, value);
+    }
+
+    private boolean isFullySubmerged() {
+        BlockPos pos = this.blockPosition();
+        return this.level().getBlockState(pos).is(Blocks.WATER)
+                && this.level().getBlockState(pos.above()).is(Blocks.WATER);
+    }
+
 
 }
