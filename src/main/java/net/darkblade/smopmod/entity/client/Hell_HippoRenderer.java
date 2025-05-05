@@ -30,7 +30,7 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
         return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + gender + "_hell_hippo" + suffix + ".png");
     }
 
-
+    //
 
 
     @Override
