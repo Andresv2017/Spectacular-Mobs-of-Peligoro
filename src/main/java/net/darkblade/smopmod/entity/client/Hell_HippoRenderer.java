@@ -15,12 +15,12 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
     }
 
     @Override
-    public ResourceLocation getTextureLocation(Hell_HippoEntity hellHippoEntity) {
-        if(hellHippoEntity.isSaddled()){
-            return new ResourceLocation(SMOP.MOD_ID, "textures/entity/male_hell_hippo_saddle.png");
-        }
-        return new ResourceLocation(SMOP.MOD_ID, "textures/entity/male_hell_hippo.png");
+    public ResourceLocation getTextureLocation(Hell_HippoEntity entity) {
+        String base = entity.isMale() ? "male" : "female";
+        String saddle = entity.isSaddled() ? "_saddle" : "";
+        return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + base + "_hell_hippo" + saddle + ".png");
     }
+
 
     @Override
     public void render(Hell_HippoEntity pEntity, float pEntityYaw, float pPartialTicks, PoseStack pMatrixStack,

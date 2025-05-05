@@ -19,6 +19,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -39,6 +40,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
@@ -62,6 +64,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING;
     private static final EntityDataAccessor<Boolean> DATA_PREPARING_SLEEP;
     private static final EntityDataAccessor<Boolean> DATA_AWAKENING;
+    private static final EntityDataAccessor<Boolean> DATA_MALE;
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final Ingredient FOOD_ITEMS;
 
@@ -433,8 +436,8 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     return InteractionResult.FAIL;
                 }
             }
-            // Attempt to feed
-            if (this.isFood(itemstack)) {
+            // Attempt to Trust Feed
+            if (TRUST_ITEM.test(itemstack)) {
                 this.usePlayerItem(pPlayer, pHand, itemstack);
                 if (!this.isTrusting()) {
                     if (this.random.nextInt(3) == 0) {
@@ -680,6 +683,34 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private boolean isShaking;
     private int shakeTicks;
 
+    //───────────────────────────────────────────────────── Sex ─────
+
+    // ─────────────────────────────────────── Synced Data
+
+    public boolean isMale() {
+        return this.entityData.get(DATA_MALE);
+    }
+
+    public void setMale(boolean male) {
+        this.entityData.set(DATA_MALE, male);
+    }
+
+    @Override
+    @Nullable
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason,
+                                        @Nullable SpawnGroupData spawnData, @Nullable CompoundTag tag) {
+        super.finalizeSpawn(level, difficulty, reason, spawnData, tag); // muy importante
+        this.setMale(this.getRandom().nextBoolean());
+        return spawnData;
+    }
+
+
+    @Override
+    public boolean canMate(Animal other) {
+        if (!(other instanceof Hell_HippoEntity hippo)) return false;
+        return this.isMale() != hippo.isMale(); // solo macho + hembra
+    }
+
     // ───────────────────────────────────────────────────── Sleep System ─────
 
     public boolean isPreparingSleep() {
@@ -923,6 +954,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.define(DATA_SLEEPING, false);
         this.entityData.define(DATA_PREPARING_SLEEP, false);
         this.entityData.define(DATA_AWAKENING, false);
+        this.entityData.define(DATA_MALE, true);
     }
 
     public void addAdditionalSaveData(CompoundTag pCompound) {
@@ -932,6 +964,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         pCompound.putBoolean("Intimidating", this.isIntimidating());
         pCompound.putBoolean("Sleeping", this.isSleeping());
         pCompound.putBoolean("PreparingSleep", this.isPreparingSleep());
+        pCompound.putBoolean("IsMale", this.isMale());
         if (this.trustingPlayerUUID != null) {
             pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
         }
@@ -951,6 +984,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
         if (pCompound.contains("PreparingSleep")) {
             this.setPreparingSleep(pCompound.getBoolean("PreparingSleep"));
+        }
+        if (pCompound.contains("IsMale")) {
+            this.setMale(pCompound.getBoolean("IsMale"));
         }
         if (pCompound.hasUUID("TrustingPlayerUUID")) {
             this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
@@ -984,7 +1020,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.goalSelector.addGoal(2, new Hell_HippoAttackGoal(this,1.0D, true));
 
         this.goalSelector.addGoal(1,new BreedGoal(this, 1.15D));
-        this.goalSelector.addGoal(2, new HellHippoTemptGoal(this, 1.2D, Ingredient.of(Items.CARROT_ON_A_STICK, Items.BEEF)));
+        this.goalSelector.addGoal(2, new HellHippoTemptGoal(this, 1.2D, FOOD_ITEMS));
 
         this.goalSelector.addGoal(2, new HellHippoWaterStrollGoal(this, 2.0));
 
@@ -1049,14 +1085,21 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         DATA_SLEEPING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_PREPARING_SLEEP = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         DATA_AWAKENING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+        DATA_MALE = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
         FOOD_ITEMS = Ingredient.of(new ItemLike[]{Items.CARROT, Items.BEEF});
     }
 
     // ───────────────────────────────────────────────────── Breeding ─────
 
+    private static final Ingredient BREEDING_ITEM = Ingredient.of(Items.CARROT);
+    private static final Ingredient TRUST_ITEM = Ingredient.of(Items.BEEF);
+
     @Override
     public @Nullable AgeableMob getBreedOffspring(ServerLevel pLevel, AgeableMob ageableMob) {return ModEntities.HELL_HIPPO.get().create(pLevel);}
 
     @Override
-    public boolean isFood(ItemStack pStack) {return pStack.is(Items.BEEF);}
+    public boolean isFood(ItemStack stack) {
+        return BREEDING_ITEM.test(stack); //
+    }
+
 }
