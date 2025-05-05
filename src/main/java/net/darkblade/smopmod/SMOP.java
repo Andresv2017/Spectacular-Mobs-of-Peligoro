@@ -2,6 +2,7 @@ package net.darkblade.smopmod;
 
 import com.mojang.logging.LogUtils;
 
+import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
@@ -34,6 +35,8 @@ public class SMOP
         ModCreativeModTabs.register(modEventBus);
         ModItems.register(modEventBus);
         RiderActionPacket.ModMessages.register();
+        ModEffects.EFFECTS.register(modEventBus);
+
 
         modEventBus.addListener(this::commonSetup);
 

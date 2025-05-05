@@ -1,6 +1,7 @@
 package net.darkblade.smopmod.entity.custom;
 
 import com.google.common.collect.UnmodifiableIterator;
+import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.ai.*;
 import net.minecraft.client.Minecraft;
@@ -215,8 +216,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 }
             }
 
-
-
             // Sprint toggle and speed adjustment
             boolean isMounted = this.isVehicle();
             boolean isChasing = this.getTarget() != null && this.getTarget().isAlive();
@@ -318,11 +317,8 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     if (dot > 0.95D) {
                         staringTicks++;
                         if (staringTicks >= 100) {
-                            if (!player.hasEffect(MobEffects.WEAKNESS)) {
-                                player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
-                            }
-                            if (!player.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)) {
-                                player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+                            if (!player.hasEffect(ModEffects.FEAR.get())) {
+                                player.addEffect(new MobEffectInstance(ModEffects.FEAR.get(), 300, 0));
                             }
                             player.displayClientMessage(Component.literal("§7You are terrified by the Hell Hippo!"), true);
                             staringTicks = 0;
@@ -351,21 +347,31 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
     }
 
-    public void performFearEffect(Player player) {
+    public boolean isFearOnCooldown() {
+        return this.fearCooldownTicks > 0;
+    }
 
+
+    public void performFearEffect(Player player) {
+        if (this.isFearOnCooldown()) {
+            player.displayClientMessage(Component.literal("§7Fear is on cooldown..."), true);
+            return;
+        }
         double range = 10.0D;
         Vec3 pos = this.position();
+        LivingEntity controllingRider = this.getControllingPassenger();
+
         List<LivingEntity> entities = this.level().getEntitiesOfClass(LivingEntity.class,
                 new AABB(pos.x - range, pos.y - 2, pos.z - range, pos.x + range, pos.y + 2, pos.z + range),
                 (entity) -> entity.isAlive()
                         && !(entity instanceof Hell_HippoEntity)
                         && entity != player
+                        && entity != controllingRider
                         && !(entity instanceof TamableAnimal tamable && tamable.isOwnedBy(player))
         );
 
         for (LivingEntity entity : entities) {
-            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
-            entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+            entity.addEffect(new MobEffectInstance(ModEffects.FEAR.get(), 60)); // 3 segundos
         }
 
         this.setIntimidating(true);
@@ -376,9 +382,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
 
         player.displayClientMessage(Component.literal("§9Hell Hippo unleashes FEAR!"), true);
-
         this.triggerFearCooldown();
     }
+
 
     @Nullable
     private ServerPlayer getRiderPlayer() {
@@ -427,7 +433,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     return InteractionResult.FAIL;
                 }
             }
-
             // Attempt to feed
             if (this.isFood(itemstack)) {
                 this.usePlayerItem(pPlayer, pHand, itemstack);
@@ -499,7 +504,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
         super.travel(travelVector);
     }
-
 
     @Override
     public boolean boost() {return this.steering.boost(this.getRandom());}

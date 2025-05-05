@@ -1,5 +1,7 @@
 {
   "item.smop.hell_hippo_cooked_meat": "Hell Hippo Cooked Meat",
   "item.smop.hell_hippo_raw_meat": "Hell Hippo Raw Meat",
-  "creativetab.smop_tab": "Spectacular Mobs Of Peligoro"
+  "creativetab.smop_tab": "Spectacular Mobs Of Peligoro",
+  "effect.smop.fear": "Fear"
+
 }
