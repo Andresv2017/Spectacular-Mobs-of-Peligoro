@@ -20,10 +20,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.BossEvent;
-import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.*;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -69,6 +66,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Boolean> DATA_AWAKENING;
     private static final EntityDataAccessor<Boolean> DATA_MALE;
     private static final EntityDataAccessor<Boolean> DATA_SEAWEED;
+    private static final EntityDataAccessor<Boolean> DATA_HAS_CHEST = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final Ingredient FOOD_ITEMS;
 
@@ -456,6 +454,13 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     return InteractionResult.FAIL;
                 }
             }
+            // Attempt to use Chest
+            if (itemstack.is(Items.CHEST) && this.isSaddled() && !this.hasChest()) {
+                this.setChest(true);
+                if (!pPlayer.getAbilities().instabuild) itemstack.shrink(1);
+                pPlayer.displayClientMessage(Component.literal("§aHell Hippo is now equipped with a chest."), true);
+                return InteractionResult.SUCCESS;
+            }
             // Attempt to Trust Feed
             if (TRUST_ITEM.test(itemstack)) {
                 this.usePlayerItem(pPlayer, pHand, itemstack);
@@ -549,6 +554,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         super.dropEquipment();
         if (this.isSaddled()) {
             this.spawnAtLocation(Items.SADDLE);
+        }
+        if (this.hasChest() && this.isSaddled()) {
+            this.spawnAtLocation(Items.CHEST);
         }
     }
 
@@ -699,7 +707,18 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
 
     //───────────────────────────────────────────────────── Chest ─────
 
+    private SimpleContainer chestInventory = new SimpleContainer(15);
 
+    public boolean hasChest() {
+        return this.entityData.get(DATA_HAS_CHEST);
+    }
+
+    public void setChest(boolean value) {
+        this.entityData.set(DATA_HAS_CHEST, value);
+        if (value && chestInventory == null) {
+            chestInventory = new SimpleContainer(15);
+        }
+    }
 
     //───────────────────────────────────────────────────── Gender ─────
 
@@ -972,6 +991,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.define(DATA_AWAKENING, false);
         this.entityData.define(DATA_MALE, true);
         this.entityData.define(DATA_SEAWEED, false);
+        this.entityData.define(DATA_HAS_CHEST, false);
     }
 
     public void addAdditionalSaveData(CompoundTag pCompound) {
@@ -984,6 +1004,10 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         pCompound.putBoolean("IsMale", this.isMale());
         if (this.trustingPlayerUUID != null) {
             pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
+        }
+        pCompound.putBoolean("HasChest", this.hasChest());
+        if (this.hasChest()) {
+            pCompound.put("ChestItems", chestInventory.createTag());
         }
     }
 
@@ -1007,6 +1031,10 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         }
         if (pCompound.hasUUID("TrustingPlayerUUID")) {
             this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
+        }
+        this.setChest(pCompound.getBoolean("HasChest"));
+        if (this.hasChest() && pCompound.contains("ChestItems")) {
+            this.chestInventory.fromTag(pCompound.getList("ChestItems", 10));
         }
     }
 

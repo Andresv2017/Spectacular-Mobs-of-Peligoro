@@ -16,21 +16,19 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
 
     @Override
     public ResourceLocation getTextureLocation(Hell_HippoEntity entity) {
-        String gender = entity.isMale() ? "male" : "female";
-        String suffix;
+        String base = entity.isMale() ? "male" : "female";
 
+        // Seaweed solo aplica si no tiene saddle
         if (entity.isSeaweed() && !entity.isSaddled()) {
-            suffix = "_seaweed";
-        } else if (entity.isSaddled()) {
-            suffix = "_saddle";
-        } else {
-            suffix = "";
+            return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + base + "_hell_hippo_seaweed.png");
         }
 
-        return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + gender + "_hell_hippo" + suffix + ".png");
-    }
+        String suffix = "_hell_hippo";
+        if (entity.isSaddled()) suffix += "_saddle";
+        if (entity.hasChest() && entity.isSaddled()) suffix += "_chest";
 
-    //
+        return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + base + suffix + ".png");
+    }
 
 
     @Override
