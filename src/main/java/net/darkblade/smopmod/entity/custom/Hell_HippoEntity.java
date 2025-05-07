@@ -8,18 +8,18 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.*;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -32,8 +32,12 @@ import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.horse.AbstractChestedHorse;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.HorseInventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -53,7 +57,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleable {
+public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvider,ItemSteerable, Saddleable {
 
     // ───────────────────────────────────────────────────── Synced Data ─────
 
@@ -66,7 +70,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
     private static final EntityDataAccessor<Boolean> DATA_AWAKENING;
     private static final EntityDataAccessor<Boolean> DATA_MALE;
     private static final EntityDataAccessor<Boolean> DATA_SEAWEED;
-    private static final EntityDataAccessor<Boolean> DATA_HAS_CHEST = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final Ingredient FOOD_ITEMS;
 
@@ -82,8 +85,9 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         return entitytype == EntityType.SHEEP || entitytype == EntityType.GOAT || entitytype == EntityType.COW;
     };
 
-    public Hell_HippoEntity(EntityType<? extends Animal> pEntityType, Level pLevel) {
+    public Hell_HippoEntity(EntityType<? extends AbstractChestedHorse> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
+        this.createInventory();
         this.steering = new ItemBasedSteering(this.entityData, DATA_BOOST_TIME, DATA_SADDLE_ID);
         this.setMaxUpStep(1.6F); // o incluso 2.0F para test
     }
@@ -457,6 +461,7 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             // Attempt to use Chest
             if (itemstack.is(Items.CHEST) && this.isSaddled() && !this.hasChest()) {
                 this.setChest(true);
+                this.createInventory(); // ✅ crucial para inicializar slots
                 if (!pPlayer.getAbilities().instabuild) itemstack.shrink(1);
                 pPlayer.displayClientMessage(Component.literal("§aHell Hippo is now equipped with a chest."), true);
                 return InteractionResult.SUCCESS;
@@ -478,21 +483,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                     pPlayer.displayClientMessage(Component.literal("\u00a7bHell Hippo already trusts you!"), true);
                 }
                 return InteractionResult.SUCCESS;
-            }
-
-            // Allow feeding with food if saddled
-            if (this.isSaddled() && itemstack.isEdible() && pPlayer.isShiftKeyDown()) {
-                if (!this.biteAnimationState.isStarted()) {
-                    this.pendingFood = itemstack.copy();
-                    this.feedingPlayer = pPlayer;
-                    this.level().broadcastEntityEvent(this, (byte) 42); // ← nuevo byte para bite anim
-                    this.biteAnimationTimeout = 20;
-                    pPlayer.displayClientMessage(Component.literal("§eHell Hippo is eating..."), true);
-                    return InteractionResult.SUCCESS;
-                } else {
-                    pPlayer.displayClientMessage(Component.literal("§cWait, still chewing..."), true);
-                    return InteractionResult.CONSUME;
-                }
             }
 
             if (this.isSaddled() && !this.isVehicle() && !itemstack.isEdible() && !pPlayer.isSecondaryUseActive()) {
@@ -703,21 +693,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
             }
         }
         return super.canAttack(target);
-    }
-
-    //───────────────────────────────────────────────────── Chest ─────
-
-    private SimpleContainer chestInventory = new SimpleContainer(15);
-
-    public boolean hasChest() {
-        return this.entityData.get(DATA_HAS_CHEST);
-    }
-
-    public void setChest(boolean value) {
-        this.entityData.set(DATA_HAS_CHEST, value);
-        if (value && chestInventory == null) {
-            chestInventory = new SimpleContainer(15);
-        }
     }
 
     //───────────────────────────────────────────────────── Gender ─────
@@ -991,7 +966,6 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         this.entityData.define(DATA_AWAKENING, false);
         this.entityData.define(DATA_MALE, true);
         this.entityData.define(DATA_SEAWEED, false);
-        this.entityData.define(DATA_HAS_CHEST, false);
     }
 
     public void addAdditionalSaveData(CompoundTag pCompound) {
@@ -1005,9 +979,19 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (this.trustingPlayerUUID != null) {
             pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
         }
-        pCompound.putBoolean("HasChest", this.hasChest());
+        pCompound.putBoolean("ChestedHorse", this.hasChest());
         if (this.hasChest()) {
-            pCompound.put("ChestItems", chestInventory.createTag());
+            ListTag listtag = new ListTag();
+            for (int i = 2; i < this.inventory.getContainerSize(); ++i) {
+                ItemStack itemstack = this.inventory.getItem(i);
+                if (!itemstack.isEmpty()) {
+                    CompoundTag itemTag = new CompoundTag();
+                    itemTag.putByte("Slot", (byte) i);
+                    itemstack.save(itemTag);
+                    listtag.add(itemTag);
+                }
+            }
+            pCompound.put("Items", listtag);
         }
     }
 
@@ -1032,9 +1016,18 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
         if (pCompound.hasUUID("TrustingPlayerUUID")) {
             this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
         }
-        this.setChest(pCompound.getBoolean("HasChest"));
-        if (this.hasChest() && pCompound.contains("ChestItems")) {
-            this.chestInventory.fromTag(pCompound.getList("ChestItems", 10));
+        this.setChest(pCompound.getBoolean("ChestedHorse"));
+        this.createInventory(); // ← muy importante
+
+        if (this.hasChest() && pCompound.contains("Items", Tag.TAG_LIST)) {
+            ListTag list = pCompound.getList("Items", Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); ++i) {
+                CompoundTag itemTag = list.getCompound(i);
+                int slot = itemTag.getByte("Slot") & 255;
+                if (slot >= 2 && slot < this.inventory.getContainerSize()) {
+                    this.inventory.setItem(slot, ItemStack.of(itemTag));
+                }
+            }
         }
     }
 
@@ -1164,5 +1157,29 @@ public class Hell_HippoEntity extends Animal implements ItemSteerable, Saddleabl
                 && this.level().getBlockState(pos.above()).is(Blocks.WATER);
     }
 
+    // ───────────────────────────────────────────────────── Extended Inventory ─────
 
+    @Override
+    protected int getInventorySize() {
+        return this.hasChest() ? 17 : super.getInventorySize(); // 2 para saddle + armor + 15 slots
+    }
+
+    @Override
+    public @Nullable AbstractContainerMenu createMenu(int id, Inventory playerInventory, Player player) {
+        return new HorseInventoryMenu(id, playerInventory, this.inventory, this);
+    }
+
+    public void openInventoryFor(ServerPlayer player) {
+        System.out.println("[DEBUG] openInventoryFor() called - inventory null? " + (this.inventory == null));
+        player.openHorseInventory(this, this.inventory); // Forge 1.20.1 API
+    }
+
+    @Override
+    public boolean canJump() {return false;}
+
+    @Override
+    public void handleStartJump(int jumpPower) {}
+
+    @Override
+    public boolean isJumping() {return false;}
 }

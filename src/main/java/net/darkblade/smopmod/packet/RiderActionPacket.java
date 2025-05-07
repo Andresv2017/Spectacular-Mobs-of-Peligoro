@@ -2,8 +2,11 @@ package net.darkblade.smopmod.packet;
 
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.inventory.HorseInventoryMenu;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -30,20 +33,32 @@ public class RiderActionPacket {
         NetworkEvent.Context context = contextSupplier.get();
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
-            if (player != null && player.getVehicle() instanceof Hell_HippoEntity hellHippo) {
-                if (packet.actionType == ActionType.ATTACK) {
-                    hellHippo.performMountedAttack(player);
-                } else if (packet.actionType == ActionType.FEAR) {
-                    hellHippo.performFearEffect(player);
+            if (player == null) return;
+
+            if (player.getVehicle() instanceof Hell_HippoEntity hellHippo) {
+                switch (packet.actionType) {
+                    case ATTACK -> hellHippo.performMountedAttack(player);
+                    case FEAR -> hellHippo.performFearEffect(player);
+                    case OPEN_INVENTORY -> {
+                        System.out.println("[SERVER] Saddled: " + hellHippo.isSaddled() + ", HasChest: " + hellHippo.hasChest());
+                        if (hellHippo.isSaddled() && hellHippo.hasChest()) {
+                            hellHippo.openInventoryFor(player);
+                        } else {
+                            player.displayClientMessage(Component.literal("\u00a7cYou must equip a saddle and chest first."), true);
+                        }
+                    }
+
                 }
             }
         });
         context.setPacketHandled(true);
     }
 
+
     public enum ActionType {
         ATTACK,
-        FEAR
+        FEAR,
+        OPEN_INVENTORY // 👈 nuevo
     }
 
     public static class ModMessages {

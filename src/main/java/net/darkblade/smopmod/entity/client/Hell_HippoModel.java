@@ -5,7 +5,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.darkblade.smopmod.entity.animations.ModAnimationDefinitions;
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
-import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -180,6 +179,14 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		this.animate(((Hell_HippoEntity) entity).sleepAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sleep, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).awakeningAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.awakening, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).deathAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.death, ageInTicks, 1f);
+
+		/*
+		if (((Hell_HippoEntity) entity).isSleeping()) {
+			this.Hipopotamo_Infernal.setPos(0.0F, 6.0F, 0.0F); // Ajusta la raíz hacia abajo para anclar la animación
+		} else {
+			this.Hipopotamo_Infernal.setPos(0.0F, 0.0F, 0.0F); // Posición normal
+		}
+		*/
 	}
 
 	private void applyHeadRotation(float pNetHeadYaw, float pHeadPitch, float pAgeInTicks) {
@@ -199,4 +206,5 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 	public ModelPart root() {
 		return Hipopotamo_Infernal;
 	}
+
 }

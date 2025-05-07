@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
 
 public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_HippoModel<Hell_HippoEntity>> {
 
@@ -41,4 +42,13 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
 
         super.render(pEntity, pEntityYaw, pPartialTicks, pMatrixStack, pBuffer, pPackedLight);
     }
+
+    @Override
+    public Vec3 getRenderOffset(Hell_HippoEntity entity, float partialTicks) {
+        if (entity.isSleeping()) {
+            return new Vec3(0.0D, -1.1D, 0.0D); // 🔽 ajusta este valor si aún queda flotando
+        }
+        return super.getRenderOffset(entity, partialTicks);
+    }
+
 }

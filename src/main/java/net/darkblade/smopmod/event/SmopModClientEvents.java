@@ -14,11 +14,13 @@ public class SmopModClientEvents {
 
     public static final KeyMapping ATTACK_KEY = new KeyMapping("key.smopmod.attack", GLFW.GLFW_KEY_R, "key.categories.smopmod");
     public static final KeyMapping FEAR_KEY = new KeyMapping("key.smopmod.fear", GLFW.GLFW_KEY_G, "key.categories.smopmod");
+    public static final KeyMapping OPEN_INVENTORY_KEY = new KeyMapping("key.smopmod.open_inventory", GLFW.GLFW_KEY_V, "key.categories.smopmod");
 
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(ATTACK_KEY);
         event.register(FEAR_KEY);
+        event.register(OPEN_INVENTORY_KEY); // 👈 nuevo
     }
 
     @SubscribeEvent
@@ -29,6 +31,9 @@ public class SmopModClientEvents {
             }
             if (FEAR_KEY.consumeClick()) {
                 RiderActionPacket.ModMessages.sendToServer(new RiderActionPacket(RiderActionPacket.ActionType.FEAR));
+            }
+            if (OPEN_INVENTORY_KEY.consumeClick()) {
+                RiderActionPacket.ModMessages.sendToServer(new RiderActionPacket(RiderActionPacket.ActionType.OPEN_INVENTORY)); // 👈 nuevo
             }
         }
     }
