@@ -65,6 +65,8 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		this.left_calf = this.left_leg2.getChild("left_calf");
 	}
 
+	//
+
 	public static LayerDefinition createBodyLayer() {
 		MeshDefinition meshdefinition = new MeshDefinition();
 		PartDefinition partdefinition = meshdefinition.getRoot();
