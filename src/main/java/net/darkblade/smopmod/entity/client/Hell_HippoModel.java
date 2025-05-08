@@ -16,7 +16,7 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 	private final ModelPart Hipopotamo_Infernal;
 	private final ModelPart body;
 	private final ModelPart neck;
-	private final ModelPart neck2;
+	private final ModelPart troath;
 	private final ModelPart head;
 	private final ModelPart eyes;
 	private final ModelPart nose_hairs;
@@ -42,7 +42,7 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		this.Hipopotamo_Infernal = root.getChild("Hipopotamo_Infernal");
 		this.body = this.Hipopotamo_Infernal.getChild("body");
 		this.neck = this.body.getChild("neck");
-		this.neck2 = this.neck.getChild("neck2");
+		this.troath = this.neck.getChild("troath");
 		this.head = this.neck.getChild("head");
 		this.eyes = this.head.getChild("eyes");
 		this.nose_hairs = this.head.getChild("nose_hairs");
@@ -74,10 +74,11 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		PartDefinition body = Hipopotamo_Infernal.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 119).addBox(0.0F, -20.0F, -10.0F, 0.0F, 5.0F, 13.0F, new CubeDeformation(0.0F))
 				.texOffs(0, 44).addBox(-9.0F, -15.0F, -15.0F, 18.0F, 20.0F, 20.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -20.0F, 18.0F));
 
-		PartDefinition neck = body.addOrReplaceChild("neck", CubeListBuilder.create().texOffs(118, 80).addBox(0.0F, -18.0F, -17.0F, 0.0F, 5.0F, 13.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -7.0F, -31.0F));
+		PartDefinition neck = body.addOrReplaceChild("neck", CubeListBuilder.create(), PartPose.offset(0.0F, -7.0F, -31.0F));
 
-		PartDefinition neck2 = neck.addOrReplaceChild("neck2", CubeListBuilder.create().texOffs(106, 158).addBox(-5.0F, -10.0F, -14.0F, 10.0F, 16.0F, 20.0F, new CubeDeformation(0.01F))
-				.texOffs(76, 44).mirror().addBox(-5.0F, -10.0F, -14.0F, 10.0F, 16.0F, 20.0F, new CubeDeformation(0.0F)).mirror(false), PartPose.offset(0.0F, -3.0F, -5.0F));
+		PartDefinition troath = neck.addOrReplaceChild("troath", CubeListBuilder.create().texOffs(106, 158).addBox(-5.0F, -10.0F, -14.0F, 10.0F, 16.0F, 20.0F, new CubeDeformation(0.01F))
+				.texOffs(76, 44).mirror().addBox(-5.0F, -10.0F, -14.0F, 10.0F, 16.0F, 20.0F, new CubeDeformation(0.0F)).mirror(false)
+				.texOffs(118, 80).addBox(0.0F, -15.0F, -12.0F, 0.0F, 5.0F, 13.0F, new CubeDeformation(0.0F)), PartPose.offset(0.0F, -3.0F, -5.0F));
 
 		PartDefinition head = neck.addOrReplaceChild("head", CubeListBuilder.create().texOffs(174, 115).addBox(-6.5F, -8.0F, -9.0F, 12.0F, 5.0F, 9.0F, new CubeDeformation(0.01F))
 				.texOffs(0, 84).addBox(-6.5F, -8.0F, -9.0F, 12.0F, 13.0F, 9.0F, new CubeDeformation(0.0F))
@@ -97,7 +98,7 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 				.texOffs(26, 119).addBox(-0.5F, -11.0F, -23.0F, 0.0F, 4.0F, 6.0F, new CubeDeformation(0.0F))
 				.texOffs(108, 125).addBox(3.5F, -10.0F, -23.0F, 0.0F, 3.0F, 6.0F, new CubeDeformation(0.0F)), PartPose.offset(0.5F, -3.0F, -15.0F));
 
-		PartDefinition eyes = head.addOrReplaceChild("eyes", CubeListBuilder.create().texOffs(92, 35).addBox(-6.0F, -1.0F, -1.5F, 12.0F, 1.0F, 3.0F, new CubeDeformation(0.01F)), PartPose.offset(-0.5F, -5.0F, -7.5F));
+		PartDefinition eyes = head.addOrReplaceChild("eyes", CubeListBuilder.create().texOffs(92, 35).addBox(-6.0F, -0.5F, -1.5F, 12.0F, 1.0F, 3.0F, new CubeDeformation(0.01F)), PartPose.offset(-0.5F, -5.5F, -7.5F));
 
 		PartDefinition nose_hairs = head.addOrReplaceChild("nose_hairs", CubeListBuilder.create().texOffs(70, 107).mirror().addBox(-4.0F, -1.0F, -1.5F, 0.0F, 1.0F, 3.0F, new CubeDeformation(0.0F)).mirror(false)
 				.texOffs(130, 0).addBox(0.0F, -2.0F, -1.5F, 0.0F, 2.0F, 3.0F, new CubeDeformation(0.0F))
@@ -179,14 +180,6 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 		this.animate(((Hell_HippoEntity) entity).sleepAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sleep, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).awakeningAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.awakening, ageInTicks, 1f);
 		this.animate(((Hell_HippoEntity) entity).deathAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.death, ageInTicks, 1f);
-
-		/*
-		if (((Hell_HippoEntity) entity).isSleeping()) {
-			this.Hipopotamo_Infernal.setPos(0.0F, 6.0F, 0.0F); // Ajusta la raíz hacia abajo para anclar la animación
-		} else {
-			this.Hipopotamo_Infernal.setPos(0.0F, 0.0F, 0.0F); // Posición normal
-		}
-		*/
 	}
 
 	private void applyHeadRotation(float pNetHeadYaw, float pHeadPitch, float pAgeInTicks) {

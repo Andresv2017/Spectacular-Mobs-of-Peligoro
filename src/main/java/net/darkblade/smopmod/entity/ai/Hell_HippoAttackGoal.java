@@ -21,6 +21,7 @@ public class Hell_HippoAttackGoal extends MeleeAttackGoal {
 
     @Override
     public boolean canUse() {
+        if (entity.isSleeping()) return false;
         if (this.entity.isTrusting() && this.entity.isSaddled() && this.entity.isVehicle()) {
             return false;
         }
@@ -46,6 +47,8 @@ public class Hell_HippoAttackGoal extends MeleeAttackGoal {
     @Override
     public void tick() {
         super.tick();
+
+        if (entity.isSleeping()) return;
 
         if (shouldCountTillNextAttack) {
             ticksUntilNextAttack = Math.max(ticksUntilNextAttack - 1, 0);

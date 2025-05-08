@@ -19,16 +19,26 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
     public ResourceLocation getTextureLocation(Hell_HippoEntity entity) {
         String base = entity.isMale() ? "male" : "female";
 
-        // Seaweed solo aplica si no tiene saddle
         if (entity.isSeaweed() && !entity.isSaddled()) {
             return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + base + "_hell_hippo_seaweed.png");
         }
 
-        String suffix = "_hell_hippo";
-        if (entity.isSaddled()) suffix += "_saddle";
-        if (entity.hasChest() && entity.isSaddled()) suffix += "_chest";
+        String texture = base + "_hell_hippo";
 
-        return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + base + suffix + ".png");
+        if (entity.isSaddled()) {
+            texture += "_saddle";
+
+            if (entity.hasArmor()) {
+                texture += "_armored";
+            }
+
+            if (entity.hasChest()) {
+                texture += "_chest";
+            }
+        } else if (entity.hasArmor()) {
+            texture += "_armored";
+        }
+        return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + texture + ".png");
     }
 
 
@@ -41,14 +51,6 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
         }
 
         super.render(pEntity, pEntityYaw, pPartialTicks, pMatrixStack, pBuffer, pPackedLight);
-    }
-
-    @Override
-    public Vec3 getRenderOffset(Hell_HippoEntity entity, float partialTicks) {
-        if (entity.isSleeping()) {
-            return new Vec3(0.0D, -1.1D, 0.0D); // 🔽 ajusta este valor si aún queda flotando
-        }
-        return super.getRenderOffset(entity, partialTicks);
     }
 
 }

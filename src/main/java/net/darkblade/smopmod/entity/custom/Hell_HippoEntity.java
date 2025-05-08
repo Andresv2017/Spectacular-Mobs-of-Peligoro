@@ -25,6 +25,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
@@ -38,6 +40,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.DismountHelper;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.HorseInventoryMenu;
+import net.minecraft.world.item.HorseArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -71,6 +74,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     private static final EntityDataAccessor<Boolean> DATA_MALE;
     private static final EntityDataAccessor<Boolean> DATA_SEAWEED;
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_ARMOR = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final Ingredient FOOD_ITEMS;
 
     // ───────────────────────────────────────────────────── Constructor ─────
@@ -209,7 +213,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             if (this.isSleeping() && (!this.hasEffect(MobEffects.WEAKNESS) || this.isSaddled())) {
                 this.setSleeping(false);
                 this.sleepAnimationState.stop();
-                this.awakeningTicks = 130;
+                this.awakeningTicks = 30;
                 this.setAwakening(true);
                 Player p = this.level().getNearestPlayer(this, 10);
                 if (p != null) {
@@ -466,6 +470,21 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 pPlayer.displayClientMessage(Component.literal("§aHell Hippo is now equipped with a chest."), true);
                 return InteractionResult.SUCCESS;
             }
+            // Attempt to use Horse Armor
+            if (itemstack.getItem() instanceof HorseArmorItem && this.isSaddled()) {
+                if (this.hasArmor()) {
+                    pPlayer.displayClientMessage(Component.literal("§cHell Hippo already has armor equipped."), true);
+                    return InteractionResult.FAIL;
+                } else {
+                    this.inventory.setItem(1, itemstack.copyWithCount(1));
+                    this.updateArmorBonus();
+                    if (!pPlayer.getAbilities().instabuild) {
+                        itemstack.shrink(1);
+                    }
+                    pPlayer.displayClientMessage(Component.literal("§9Hell Hippo is now armored."), true);
+                    return InteractionResult.SUCCESS;
+                }
+            }
             // Attempt to Trust Feed
             if (TRUST_ITEM.test(itemstack)) {
                 this.usePlayerItem(pPlayer, pHand, itemstack);
@@ -493,6 +512,9 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                     pPlayer.displayClientMessage(Component.literal("§7[HH] Wait, still waking up..."), true);
                     return InteractionResult.FAIL;
                 }
+            } else if (!this.isSaddled() || !this.isTrusting()) {
+                pPlayer.displayClientMessage(Component.literal("§cHell Hippo rejects your attempt to ride."), true);
+                return InteractionResult.FAIL;
             }
         }
 
@@ -682,6 +704,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
 
     @Override
     public boolean canAttack(LivingEntity target) {
+        if (this.isSleeping()) return false; // 🔒 No atacar si está dormido
         if (this.isTrusting() && this.trustingPlayerUUID != null) {
             if (target instanceof Player player) {
                 return !player.getUUID().equals(this.trustingPlayerUUID); // no atacar a su dueño
@@ -966,6 +989,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         this.entityData.define(DATA_AWAKENING, false);
         this.entityData.define(DATA_MALE, true);
         this.entityData.define(DATA_SEAWEED, false);
+        this.entityData.define(DATA_ARMOR, false);
     }
 
     public void addAdditionalSaveData(CompoundTag pCompound) {
@@ -993,6 +1017,11 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             }
             pCompound.put("Items", listtag);
         }
+        ItemStack armor = this.getArmor();
+        if (!armor.isEmpty()) {
+            pCompound.put("HH_Armor", armor.save(new CompoundTag()));
+        }
+        pCompound.putBoolean("HasArmor", this.hasArmor()); // ✅ guardar
     }
 
     public void readAdditionalSaveData(CompoundTag pCompound) {
@@ -1028,6 +1057,12 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                     this.inventory.setItem(slot, ItemStack.of(itemTag));
                 }
             }
+        }
+        if (pCompound.contains("HH_Armor")) {
+            this.inventory.setItem(1, ItemStack.of(pCompound.getCompound("HH_Armor")));
+        }
+        if (pCompound.contains("HasArmor")) {
+            this.setHasArmor(pCompound.getBoolean("HasArmor")); // ✅ cargar
         }
     }
 
@@ -1068,7 +1103,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         this.goalSelector.addGoal(10,new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(0, new HellHippoDefendOwnerGoal(this));
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new HellHippoHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new HippoTargetPlayerGoal(this));
         this.targetSelector.addGoal(3, new HippoTargetPreyGoal(this, PREY_SELECTOR));
     }
@@ -1076,12 +1111,13 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createLivingAttributes()
                 .add(Attributes.MAX_HEALTH,20.0)
-                .add(Attributes.FOLLOW_RANGE,24D)
+                .add(Attributes.FOLLOW_RANGE,28D)
                 .add(Attributes.MOVEMENT_SPEED, 0.250)
                 .add(Attributes.ATTACK_SPEED, 0.250)
                 .add(Attributes.ARMOR_TOUGHNESS, 0.1f)
                 .add(Attributes.ATTACK_KNOCKBACK, 0.5f)
-                .add(Attributes.ATTACK_DAMAGE, 2f);
+                .add(Attributes.ATTACK_DAMAGE, 2f)
+                .add(Attributes.ARMOR);
     }
 
     // ───────────────────────────────────────────────────── Event Subscriptions ─────
@@ -1157,7 +1193,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 && this.level().getBlockState(pos.above()).is(Blocks.WATER);
     }
 
-    // ───────────────────────────────────────────────────── Extended Inventory ─────
+    // ───────────────────────────────────────────────────── Inventory ─────
 
     @Override
     protected int getInventorySize() {
@@ -1174,6 +1210,8 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         player.openHorseInventory(this, this.inventory); // Forge 1.20.1 API
     }
 
+    // ───────────────────────────────────────────────────── Jump Canceled ─────
+
     @Override
     public boolean canJump() {return false;}
 
@@ -1182,4 +1220,59 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
 
     @Override
     public boolean isJumping() {return false;}
+
+    // ───────────────────────────────────────────────────── Armor ─────
+
+    public ItemStack getArmor() {
+        return this.inventory.getItem(1);
+    }
+
+    public void setHasArmor(boolean value) {
+        this.entityData.set(DATA_ARMOR, value);
+    }
+
+    public boolean hasArmor() {
+        return this.entityData.get(DATA_ARMOR);
+    }
+
+    @Override
+    public Iterable<ItemStack> getArmorSlots() {
+        return List.of(this.getArmor());
+    }
+
+    private static final UUID ARMOR_MODIFIER_UUID = UUID.fromString("eaa3b631-1130-4b38-a963-8edb15e8a511");
+    private static final AttributeModifier ARMOR_MODIFIER = new AttributeModifier(ARMOR_MODIFIER_UUID, "HellHippoArmorBonus", 5.0D, AttributeModifier.Operation.ADDITION);
+
+    public void updateArmorBonus() {
+        AttributeInstance armorAttr = this.getAttribute(Attributes.ARMOR);
+        if (armorAttr == null) return;
+
+        ItemStack armor = this.getArmor(); // slot 1
+        boolean hasModifier = armorAttr.hasModifier(ARMOR_MODIFIER);
+
+        if (armor.getItem() instanceof HorseArmorItem) {
+            if (!hasModifier) {
+                armorAttr.addPermanentModifier(ARMOR_MODIFIER);
+            }
+        } else if (hasModifier) {
+            armorAttr.removeModifier(ARMOR_MODIFIER);
+        }
+    }
+
+    @Override
+    public void containerChanged(Container container) {
+        super.containerChanged(container);
+        this.setHasArmor(!this.inventory.getItem(1).isEmpty());
+        this.updateContainerEquipment();
+        this.refreshDimensions();
+    }
+
+    protected void updateContainerEquipment() {
+        if (!this.level().isClientSide) {
+            this.setFlag(4, !this.inventory.getItem(0).isEmpty());
+            this.setHasArmor(!this.inventory.getItem(1).isEmpty());
+        }
+    }
+
+    //Al estar seewedd con una tijera sacar el alga
 }

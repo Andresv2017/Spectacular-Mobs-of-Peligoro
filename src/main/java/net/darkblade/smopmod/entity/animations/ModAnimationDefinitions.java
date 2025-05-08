@@ -848,9 +848,7 @@ public class ModAnimationDefinitions {
 
             public static final AnimationDefinition sleep_preparing = AnimationDefinition.Builder.withLength(3.0F)
                     .addAnimation("Hipopotamo_Infernal", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                            new Keyframe(1.3F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                            new Keyframe(1.7F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
                     ))
                     .addAnimation("neck", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                             new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.98F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
@@ -972,12 +970,16 @@ public class ModAnimationDefinitions {
                             new Keyframe(1.9F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
                             new Keyframe(2.7F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
                     ))
-                    .build();
-
-            public static final AnimationDefinition sleep = AnimationDefinition.Builder.withLength(2.0F).looping()
-                    .addAnimation("Hipopotamo_Infernal", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+                    .addAnimation("body", new AnimationChannel(AnimationChannel.Targets.POSITION,
+                            new Keyframe(1.3F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
+                            new Keyframe(1.7F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
                     ))
+                    .addAnimation("legs", new AnimationChannel(AnimationChannel.Targets.POSITION,
+                            new Keyframe(1.3F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
+                            new Keyframe(1.7F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+                    ))
+                    .build();
+            public static final AnimationDefinition sleep = AnimationDefinition.Builder.withLength(2.0F).looping()
                     .addAnimation("neck", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                             new Keyframe(0.0F, KeyframeAnimations.degreeVec(20.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
                     ))
@@ -1071,18 +1073,24 @@ public class ModAnimationDefinitions {
                     .addAnimation("right_calf", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                             new Keyframe(0.0F, KeyframeAnimations.degreeVec(-42.5F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
                     ))
+                    .addAnimation("body", new AnimationChannel(AnimationChannel.Targets.POSITION,
+                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+                    ))
+                    .addAnimation("legs", new AnimationChannel(AnimationChannel.Targets.POSITION,
+                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+                    ))
                     .build();
 
             public static final AnimationDefinition awakening = AnimationDefinition.Builder.withLength(1.5F)
-                    .addAnimation("Hipopotamo_Infernal", new AnimationChannel(AnimationChannel.Targets.POSITION,
-                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
-                            new Keyframe(1.5F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
-                    ))
                     .addAnimation("body", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                             new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
                             new Keyframe(0.3F, KeyframeAnimations.degreeVec(-7.5F, 2.5F, -7.5F), AnimationChannel.Interpolations.CATMULLROM),
                             new Keyframe(0.7F, KeyframeAnimations.degreeVec(-14.8242F, 1.6189F, 12.3964F), AnimationChannel.Interpolations.CATMULLROM),
                             new Keyframe(1.5F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
+                    ))
+                    .addAnimation("body", new AnimationChannel(AnimationChannel.Targets.POSITION,
+                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
+                            new Keyframe(1.5F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
                     ))
                     .addAnimation("neck", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                             new Keyframe(0.0F, KeyframeAnimations.degreeVec(20.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
@@ -1195,8 +1203,11 @@ public class ModAnimationDefinitions {
                             new Keyframe(0.7F, KeyframeAnimations.posVec(0.0F, 4.0F, -2.0F), AnimationChannel.Interpolations.LINEAR),
                             new Keyframe(1.35F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
                     ))
+                    .addAnimation("legs", new AnimationChannel(AnimationChannel.Targets.POSITION,
+                            new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, -17.0F, 0.0F), AnimationChannel.Interpolations.LINEAR),
+                            new Keyframe(1.5F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.LINEAR)
+                    ))
                     .build();
-
         public static final AnimationDefinition bite = AnimationDefinition.Builder.withLength(1.125F)
                 .addAnimation("body", new AnimationChannel(AnimationChannel.Targets.ROTATION,
                         new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),

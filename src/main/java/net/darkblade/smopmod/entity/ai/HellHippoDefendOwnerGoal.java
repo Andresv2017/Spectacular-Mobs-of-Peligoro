@@ -18,6 +18,7 @@ public class HellHippoDefendOwnerGoal extends TargetGoal {
 
     @Override
     public boolean canUse() {
+        if (hellHippo.isSleeping()) return false; // 🔒 No defender dormido
         if (!hellHippo.isTrusting() || hellHippo.trustingPlayerUUID == null) {
             return false;
         }
