@@ -39,4 +39,5 @@ public class HellHippoDefendOwnerGoal extends TargetGoal {
         this.hellHippo.setTarget(this.lastAttacker);
         super.start();
     }
+    //
 }

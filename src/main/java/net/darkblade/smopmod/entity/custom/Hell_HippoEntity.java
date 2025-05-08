@@ -1273,6 +1273,4 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             this.setHasArmor(!this.inventory.getItem(1).isEmpty());
         }
     }
-
-    //Al estar seewedd con una tijera sacar el alga
 }

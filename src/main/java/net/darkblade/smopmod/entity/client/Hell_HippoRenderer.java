@@ -41,6 +41,7 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
         return new ResourceLocation(SMOP.MOD_ID, "textures/entity/" + texture + ".png");
     }
 
+    //
 
     @Override
     public void render(Hell_HippoEntity pEntity, float pEntityYaw, float pPartialTicks, PoseStack pMatrixStack,

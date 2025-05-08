@@ -102,4 +102,5 @@ public class Hell_HippoAttackGoal extends MeleeAttackGoal {
         entity.attackAnimationTimeout = 0;
         startedAttackAnimation = false;
     }
+    //
 }
