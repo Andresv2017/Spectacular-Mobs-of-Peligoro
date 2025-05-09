@@ -2,6 +2,8 @@ package net.darkblade.smopmod.item;
 
 import net.darkblade.smopmod.SMOP;
 import net.darkblade.smopmod.entity.ModEntities;
+import net.darkblade.smopmod.registry.ModHorseArmorMaterials;
+import net.minecraft.world.item.HorseArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -24,6 +26,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> TANGOFTERO_SPAWN_EGG = ITEMS.register("tangoftero_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.TANGOFTERO, 0x9019e8, 0xe6e1ea, new Item.Properties()));
+
+    public static final RegistryObject<Item> HELHIPPO_ARMOR = ITEMS.register("hellhippo_armor", () ->
+            new HorseArmorItem(15, "", new Item.Properties().stacksTo(1)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

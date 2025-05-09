@@ -4,6 +4,8 @@ import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.ai.hell_hippo.*;
+import net.darkblade.smopmod.entity.inventory.HellHippoInventory;
+import net.darkblade.smopmod.item.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -473,12 +475,13 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 return InteractionResult.SUCCESS;
             }
             // Attempt to use Horse Armor
-            if (itemstack.getItem() instanceof HorseArmorItem && this.isSaddled()) {
+            if (itemstack.getItem() == ModItems.HELHIPPO_ARMOR.get() && this.isSaddled()) {
                 if (this.hasArmor()) {
                     pPlayer.displayClientMessage(Component.literal("§cHell Hippo already has armor equipped."), true);
                     return InteractionResult.FAIL;
                 } else {
                     this.inventory.setItem(1, itemstack.copyWithCount(1));
+                    this.setHasArmor(true);
                     this.updateArmorBonus();
                     if (!pPlayer.getAbilities().instabuild) {
                         itemstack.shrink(1);
@@ -1224,6 +1227,14 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         return new HorseInventoryMenu(id, playerInventory, this.inventory, this);
     }
 
+    @Override
+    protected void createInventory() {
+        int size = this.getInventorySize();
+        this.inventory = new HellHippoInventory(this, size);
+        this.inventory.addListener(this); // 🔥 NECESARIO para detectar cambios desde GUI
+    }
+
+
     public void openInventoryFor(ServerPlayer player) {
         System.out.println("[DEBUG] openInventoryFor() called - inventory null? " + (this.inventory == null));
         player.openHorseInventory(this, this.inventory); // Forge 1.20.1 API
@@ -1242,6 +1253,11 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
 
     // ───────────────────────────────────────────────────── Armor ─────
 
+    @Override
+    public boolean canWearArmor() {
+        return true;
+    }
+
     public ItemStack getArmor() {
         return this.inventory.getItem(1);
     }
@@ -1252,6 +1268,11 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
 
     public boolean hasArmor() {
         return this.entityData.get(DATA_ARMOR);
+    }
+
+    @Override
+    public boolean isArmor(ItemStack stack) {
+        return stack.getItem() == ModItems.HELHIPPO_ARMOR.get();
     }
 
     @Override
@@ -1281,7 +1302,9 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     @Override
     public void containerChanged(Container container) {
         super.containerChanged(container);
-        this.setHasArmor(!this.inventory.getItem(1).isEmpty());
+        boolean hasArmor = !this.inventory.getItem(1).isEmpty();
+        this.setHasArmor(hasArmor);
+        this.updateArmorBonus(); // ✅ ACTUALIZA o REMUEVE atributo ARMOR
         this.updateContainerEquipment();
         this.refreshDimensions();
     }
