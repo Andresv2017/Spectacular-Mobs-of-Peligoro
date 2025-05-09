@@ -5,6 +5,7 @@ import com.mojang.logging.LogUtils;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
+import net.darkblade.smopmod.entity.client.TangofteroRender;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
 import net.darkblade.smopmod.item.ModItems;
 import net.darkblade.smopmod.packet.RiderActionPacket;
@@ -73,6 +74,7 @@ public class SMOP
         public static void onClientSetup(FMLClientSetupEvent event)
         {
             EntityRenderers.register(ModEntities.HELL_HIPPO.get(), Hell_HippoRenderer::new);
+            EntityRenderers.register(ModEntities.TANGOFTERO.get(), TangofteroRender::new);
         }
     }
 }

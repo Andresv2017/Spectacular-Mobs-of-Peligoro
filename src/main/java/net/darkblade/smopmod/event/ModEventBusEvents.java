@@ -12,5 +12,6 @@ public class ModEventBusEvents {
     @SubscribeEvent
     public static void registerAttributes (EntityAttributeCreationEvent event) {
         event.put(ModEntities.HELL_HIPPO.get(), Hell_HippoEntity.createAttributes().build());
+        event.put(ModEntities.TANGOFTERO.get(), Hell_HippoEntity.createAttributes().build());
     }
 }

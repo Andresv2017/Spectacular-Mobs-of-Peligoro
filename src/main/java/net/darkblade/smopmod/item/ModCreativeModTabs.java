@@ -19,6 +19,8 @@ public class ModCreativeModTabs {
                     .displayItems((pParameters, pOutput) -> {
                         pOutput.accept(ModItems.HELL_HIPPO_COOKED_MEAT.get());
                         pOutput.accept(ModItems.HELL_HIPPO_RAW_MEAT.get());
+                        pOutput.accept(ModItems.HELL_HIPPO_SPAWN_EGG.get());
+                        pOutput.accept(ModItems.TANGOFTERO_SPAWN_EGG.get());
 
 
                     })

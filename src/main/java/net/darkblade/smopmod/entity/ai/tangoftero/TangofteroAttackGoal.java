@@ -1,54 +1,51 @@
-package net.darkblade.smopmod.entity.ai;
+package net.darkblade.smopmod.entity.ai.tangoftero;
 
-import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
+import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 
-public class Hell_HippoAttackGoal extends MeleeAttackGoal {
+public class TangofteroAttackGoal extends MeleeAttackGoal {
 
-    private final Hell_HippoEntity entity;
-    private int attackDelay = 7;
-    private int ticksUntilNextAttack = 13;
+    private final TangofteroEntity entity;
+    private int attackDelay = 5;
+    private int ticksUntilNextAttack = 10;
     private boolean shouldCountTillNextAttack = false;
     private boolean startedAttackAnimation = false;
 
-    public Hell_HippoAttackGoal(PathfinderMob pMob, double pSpeedModifier, boolean pFollowingTargetEvenIfNotSeen) {
+    public TangofteroAttackGoal(PathfinderMob pMob, double pSpeedModifier, boolean pFollowingTargetEvenIfNotSeen) {
         super(pMob, pSpeedModifier, pFollowingTargetEvenIfNotSeen);
-        this.entity = (Hell_HippoEntity) pMob;
-    }
-
-    @Override
-    public boolean canUse() {
-        if (entity.isSleeping()) return false;
-        if (this.entity.isTrusting() && this.entity.isSaddled() && this.entity.isVehicle()) {
-            return false;
-        }
-        return super.canUse();
+        this.entity = (TangofteroEntity) pMob;
     }
 
     @Override
     public void start() {
         super.start();
-        attackDelay = 7;
-        ticksUntilNextAttack = 13;
-        startedAttackAnimation = false;
+        attackDelay = 5;
+        ticksUntilNextAttack = 10;
         shouldCountTillNextAttack = false;
+        startedAttackAnimation = false;
         entity.setAttacking(false);
         entity.attackAnimationTimeout = 0;
     }
 
-    private void performAttack(LivingEntity target) {
-        this.mob.swing(InteractionHand.MAIN_HAND);
-        this.mob.doHurtTarget(target);
+    @Override
+    protected void checkAndPerformAttack(LivingEntity pEnemy, double pDistToEnemySqr) {
+        if (pDistToEnemySqr <= this.getAttackReachSqr(pEnemy)) {
+            shouldCountTillNextAttack = true;
+        } else {
+            shouldCountTillNextAttack = false;
+            entity.setAttacking(false);
+            startedAttackAnimation = false;
+            entity.attackAnimationTimeout = 0;
+            resetAttackCooldown();
+        }
     }
 
     @Override
     public void tick() {
         super.tick();
-
-        if (entity.isSleeping()) return;
 
         if (shouldCountTillNextAttack) {
             ticksUntilNextAttack = Math.max(ticksUntilNextAttack - 1, 0);
@@ -77,17 +74,9 @@ public class Hell_HippoAttackGoal extends MeleeAttackGoal {
         }
     }
 
-    @Override
-    protected void checkAndPerformAttack(LivingEntity pEnemy, double pDistToEnemySqr) {
-        if (pDistToEnemySqr <= this.getAttackReachSqr(pEnemy)) {
-            shouldCountTillNextAttack = true;
-        } else {
-            shouldCountTillNextAttack = false;
-            entity.setAttacking(false);
-            startedAttackAnimation = false;
-            entity.attackAnimationTimeout = 0;
-            resetAttackCooldown();
-        }
+    protected void performAttack(LivingEntity target) {
+        this.mob.swing(InteractionHand.MAIN_HAND);
+        this.mob.doHurtTarget(target);
     }
 
     protected void resetAttackCooldown() {
@@ -102,5 +91,4 @@ public class Hell_HippoAttackGoal extends MeleeAttackGoal {
         entity.attackAnimationTimeout = 0;
         startedAttackAnimation = false;
     }
-    //
 }

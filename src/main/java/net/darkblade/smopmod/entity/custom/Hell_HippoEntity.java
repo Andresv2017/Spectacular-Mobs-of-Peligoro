@@ -3,7 +3,7 @@ package net.darkblade.smopmod.entity.custom;
 import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
-import net.darkblade.smopmod.entity.ai.*;
+import net.darkblade.smopmod.entity.ai.hell_hippo.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -30,7 +30,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
-import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.Animal;
@@ -247,9 +246,12 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
 
             // Seaweed transform logic
             if (!this.isSeaweed()) {
-                if (this.isFullySubmerged()) {
+                if (this.isFullySubmerged() && !this.isSaddled()) {
+                    if (this.seaweedTicks < 0) {
+                        this.seaweedTicks = 0; // desbloquea el contador si fue bloqueado por shear
+                    }
                     this.seaweedTicks++;
-                    if (this.seaweedTicks >= 200) { // 10 segundos = 200 ticks
+                    if (this.seaweedTicks >= 200) {
                         this.setSeaweed(true);
                         this.playSound(SoundEvents.TURTLE_EGG_HATCH, 1.0F, 1.0F);
                     }
@@ -501,6 +503,23 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 } else {
                     pPlayer.displayClientMessage(Component.literal("\u00a7bHell Hippo already trusts you!"), true);
                 }
+                return InteractionResult.SUCCESS;
+            }
+
+            // Attempt to shear seaweed hippo
+            if (itemstack.is(Items.SHEARS) && this.isSeaweed()) {
+                this.setSeaweed(false);
+                this.seaweedTicks = -100; // bloquea temporalmente retransformación por 5 segundos
+
+                this.level().playSound(null, this.blockPosition(), SoundEvents.SHEEP_SHEAR, SoundSource.PLAYERS, 1.0F, 1.0F);
+
+                this.spawnAtLocation(new ItemStack(Items.KELP, 2));
+
+                if (!pPlayer.getAbilities().instabuild) {
+                    itemstack.hurtAndBreak(1, pPlayer, (player) -> player.broadcastBreakEvent(pHand));
+                }
+
+                pPlayer.displayClientMessage(Component.literal("§2Hell Hippo shed its seaweed!"), true);
                 return InteractionResult.SUCCESS;
             }
 

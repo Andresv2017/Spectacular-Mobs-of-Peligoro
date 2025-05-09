@@ -1,4 +1,4 @@
-package net.darkblade.smopmod.entity.ai;
+package net.darkblade.smopmod.entity.ai.hell_hippo;
 
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.minecraft.world.entity.LivingEntity;

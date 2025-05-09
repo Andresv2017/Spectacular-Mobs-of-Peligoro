@@ -1,4 +1,4 @@
-package net.darkblade.smopmod.entity.ai;
+package net.darkblade.smopmod.entity.ai.hell_hippo;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.PathfinderMob;
