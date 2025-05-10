@@ -1,0 +1,12 @@
+{
+  "type": "forge:add_spawns",
+  "biomes": [
+    "minecraft:plains"
+  ],
+  "spawners": {
+    "type": "smop:tangoftero",
+    "weight": 25,
+    "maxCount": 4,
+    "minCount": 2
+  }
+}

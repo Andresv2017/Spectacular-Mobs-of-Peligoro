@@ -2,14 +2,20 @@ package net.darkblade.smopmod;
 
 import com.mojang.logging.LogUtils;
 
+import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
 import net.darkblade.smopmod.entity.client.TangofteroRender;
+import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
 import net.darkblade.smopmod.item.ModItems;
 import net.darkblade.smopmod.packet.RiderActionPacket;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -35,6 +41,7 @@ public class SMOP
 
         ModCreativeModTabs.register(modEventBus);
         ModItems.register(modEventBus);
+        ModBlocks.register(modEventBus);
         RiderActionPacket.ModMessages.register();
         ModEffects.EFFECTS.register(modEventBus);
 
@@ -53,6 +60,10 @@ public class SMOP
 
     private void commonSetup(final FMLCommonSetupEvent event)
     {
+        event.enqueueWork(() -> {
+            SpawnPlacements.register(ModEntities.TANGOFTERO.get(), SpawnPlacements.Type.ON_GROUND,
+                    Heightmap.Types.MOTION_BLOCKING, TangofteroEntity::checkTangofteroSpawnRules);
+        });
     }
 
     // Add the example block item to the building blocks tab
@@ -75,6 +86,9 @@ public class SMOP
         {
             EntityRenderers.register(ModEntities.HELL_HIPPO.get(), Hell_HippoRenderer::new);
             EntityRenderers.register(ModEntities.TANGOFTERO.get(), TangofteroRender::new);
+            event.enqueueWork(() -> {
+                ItemBlockRenderTypes.setRenderLayer(ModBlocks.TANGOFTERO_EGG.get(), RenderType.cutout());
+            });
         }
     }
 }

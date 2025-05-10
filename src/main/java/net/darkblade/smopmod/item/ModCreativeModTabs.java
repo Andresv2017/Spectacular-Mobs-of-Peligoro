@@ -22,6 +22,7 @@ public class ModCreativeModTabs {
                         pOutput.accept(ModItems.HELL_HIPPO_SPAWN_EGG.get());
                         pOutput.accept(ModItems.TANGOFTERO_SPAWN_EGG.get());
                         pOutput.accept(ModItems.HELHIPPO_ARMOR.get());
+                        pOutput.accept(ModItems.TANGOFTERO_EGG_ITEM.get());
 
 
                     })

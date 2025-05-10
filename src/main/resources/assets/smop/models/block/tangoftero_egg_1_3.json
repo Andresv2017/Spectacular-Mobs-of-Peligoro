@@ -1,0 +1,6 @@
+{
+  "parent": "smop:block/template_tangoftero_egg_three",
+  "textures": {
+    "all": "smop:block/tangoftero_egg_stage1"
+  }
+}

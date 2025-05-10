@@ -1,8 +1,9 @@
 package net.darkblade.smopmod.item;
 
 import net.darkblade.smopmod.SMOP;
+import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.entity.ModEntities;
-import net.darkblade.smopmod.registry.ModHorseArmorMaterials;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.HorseArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
@@ -29,6 +30,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> HELHIPPO_ARMOR = ITEMS.register("hellhippo_armor", () ->
             new HorseArmorItem(15, "", new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Item> TANGOFTERO_EGG_ITEM = ITEMS.register("tangoftero_egg",
+            () -> new BlockItem(ModBlocks.TANGOFTERO_EGG.get(), new Item.Properties()));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

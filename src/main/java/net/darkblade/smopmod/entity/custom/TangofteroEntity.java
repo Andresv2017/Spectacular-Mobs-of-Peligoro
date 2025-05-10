@@ -1,18 +1,21 @@
 package net.darkblade.smopmod.entity.custom;
 
 import net.darkblade.smopmod.entity.ModEntities;
+import net.darkblade.smopmod.entity.TangofteroVariant;
 import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroAttackGoal;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.AnimationState;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
@@ -23,10 +26,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.Nullable;
 
 public class TangofteroEntity extends TamableAnimal {
 
+    private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
 
     public TangofteroEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
@@ -92,6 +98,7 @@ public class TangofteroEntity extends TamableAnimal {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(ATTACKING,false);
+        this.entityData.define(VARIANT,0);
     }
 
     @Override
@@ -137,5 +144,49 @@ public class TangofteroEntity extends TamableAnimal {
     @Override
     protected SoundEvent getDeathSound() {
         return SoundEvents.PARROT_DEATH;
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag pCompound) {
+        super.addAdditionalSaveData(pCompound);
+        pCompound.putInt("Variant", this.getTypeVariant());
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag pCompound) {
+        super.readAdditionalSaveData(pCompound);
+        this.entityData.set(VARIANT, pCompound.getInt("Variant"));
+    }
+
+    // ───────────────────────────────────────────────────── Variant ─────
+
+    private int getTypeVariant() {
+        return this.entityData.get(VARIANT);
+    }
+
+    public TangofteroVariant getVariant() {
+        return TangofteroVariant.byId(this.getTypeVariant() & 255);
+    }
+
+    private void setVariant(TangofteroVariant variant) {
+        this.entityData.set(VARIANT, variant.getId() & 255);
+    }
+
+    @Override
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
+        TangofteroVariant variant = Util.getRandom(TangofteroVariant.values(), this.random);
+        this.setVariant(variant);
+        return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
+    }
+
+    @Override
+    public void finalizeSpawnChildFromBreeding(ServerLevel pLevel, Animal pAnimal, @Nullable AgeableMob pBaby) {
+        TangofteroVariant variant = Util.getRandom(TangofteroVariant.values(), this.random);
+        ((TangofteroEntity) pBaby).setVariant(variant);
+        super.finalizeSpawnChildFromBreeding(pLevel, pAnimal, pBaby);
+    }
+
+    public static boolean checkTangofteroSpawnRules(EntityType<TangofteroEntity> p_218242_, LevelAccessor p_218243_, MobSpawnType p_218244_, BlockPos p_218245_, RandomSource p_218246_) {
+        return checkAnimalSpawnRules(p_218242_,p_218243_,p_218244_,p_218245_,p_218246_);
     }
 }
