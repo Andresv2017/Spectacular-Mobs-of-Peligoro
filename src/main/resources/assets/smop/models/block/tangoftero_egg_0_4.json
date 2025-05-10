@@ -1,5 +1,5 @@
 {
-  "parent": "smop:block/template_tangoftero_egg_four",
+  "parent": "smop:block/tangoftero_egg_template_four",
   "textures": {
     "all": "smop:block/tangoftero_egg_stage0"
   }

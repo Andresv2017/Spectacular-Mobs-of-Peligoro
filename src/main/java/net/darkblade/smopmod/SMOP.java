@@ -7,6 +7,7 @@ import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
 import net.darkblade.smopmod.entity.client.TangofteroRender;
+import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
 import net.darkblade.smopmod.item.ModItems;
@@ -63,6 +64,11 @@ public class SMOP
         event.enqueueWork(() -> {
             SpawnPlacements.register(ModEntities.TANGOFTERO.get(), SpawnPlacements.Type.ON_GROUND,
                     Heightmap.Types.MOTION_BLOCKING, TangofteroEntity::checkTangofteroSpawnRules);
+        });
+
+        event.enqueueWork(() -> {
+            SpawnPlacements.register(ModEntities.HELL_HIPPO.get(), SpawnPlacements.Type.ON_GROUND,
+                    Heightmap.Types.MOTION_BLOCKING, Hell_HippoEntity::checkHell_HippoSpawnRules);
         });
     }
 

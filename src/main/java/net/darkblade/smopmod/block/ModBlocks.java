@@ -14,6 +14,7 @@ public class ModBlocks {
     public static final RegistryObject<Block> TANGOFTERO_EGG = BLOCKS.register("tangoftero_egg",
             TangofteroEggBlock::new);
 
+
     public static void register(IEventBus modEventBus) {
         BLOCKS.register(FMLJavaModLoadingContext.get().getModEventBus());
     }

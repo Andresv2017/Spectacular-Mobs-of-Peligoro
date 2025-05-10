@@ -1,0 +1,13 @@
+{
+  "type": "forge:add_spawns",
+  "biomes": [
+    "minecraft:swamp",
+    "minecraft:savanna"
+  ],
+  "spawners": {
+    "type": "smop:hell_hippo",
+    "weight": 25,
+    "maxCount": 2,
+    "minCount": 1
+  }
+}

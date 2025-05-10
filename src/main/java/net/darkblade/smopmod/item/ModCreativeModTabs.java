@@ -24,7 +24,6 @@ public class ModCreativeModTabs {
                         pOutput.accept(ModItems.HELHIPPO_ARMOR.get());
                         pOutput.accept(ModItems.TANGOFTERO_EGG_ITEM.get());
 
-
                     })
                     .build());
 

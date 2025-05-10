@@ -22,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.*;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -47,6 +48,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
@@ -454,7 +456,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                     this.setSleeping(false);
                     this.setIntimidating(false);
                     this.intimidatingTicks = 0;
-                    this.awakeningTicks = 130;
+                    this.awakeningTicks = 30;
                     this.setAwakening(true);
                     this.removeEffect(MobEffects.WEAKNESS); //
                     if (!pPlayer.getAbilities().instabuild) {
@@ -865,10 +867,8 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         }
 
         if (this.isSleeping()) {
-            System.out.println("Sleeping anim check @ tick " + this.tickCount);
             this.stopAllAnimationsExcept(sleepAnimationState);
             if (!this.sleepAnimationState.isStarted()) {
-                System.out.println("Starting sleep animation at tick " + this.tickCount);
                 this.sleepAnimationState.start(this.tickCount);
             } else {
                 System.out.println("Already running sleep animation at tick " + this.tickCount);
@@ -876,12 +876,12 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             return;
         }
 
-        // ⛔ STOP animación de intimidación si NO debe estar activa
+        // STOP animación de intimidación si NO debe estar activa
         if (!this.isIntimidating() && this.intimidateAnimationState.isStarted()) {
-            this.intimidateAnimationState.stop(); // <<<<<<<<<< ✅ clave
+            this.intimidateAnimationState.stop();
         }
 
-        // ⏺️ Lógica de intimidación (solo si está activa y no en estado de sueño)
+        // Intimidation Logic
         if (this.isIntimidating()) {
             if (!this.intimidateAnimationState.isStarted() || this.tickCount - lastIntimidateAnimationTick >= 150) {
                 this.intimidateAnimationState.start(this.tickCount);
@@ -1304,7 +1304,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         super.containerChanged(container);
         boolean hasArmor = !this.inventory.getItem(1).isEmpty();
         this.setHasArmor(hasArmor);
-        this.updateArmorBonus(); // ✅ ACTUALIZA o REMUEVE atributo ARMOR
+        this.updateArmorBonus();
         this.updateContainerEquipment();
         this.refreshDimensions();
     }
@@ -1314,5 +1314,8 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             this.setFlag(4, !this.inventory.getItem(0).isEmpty());
             this.setHasArmor(!this.inventory.getItem(1).isEmpty());
         }
+    }
+    public static boolean checkHell_HippoSpawnRules(EntityType<Hell_HippoEntity> p_218242_, LevelAccessor p_218243_, MobSpawnType p_218244_, BlockPos p_218245_, RandomSource p_218246_) {
+        return checkAnimalSpawnRules(p_218242_,p_218243_,p_218244_,p_218245_,p_218246_);
     }
 }

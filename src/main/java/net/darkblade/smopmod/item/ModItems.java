@@ -34,6 +34,7 @@ public class ModItems {
     public static final RegistryObject<Item> TANGOFTERO_EGG_ITEM = ITEMS.register("tangoftero_egg",
             () -> new BlockItem(ModBlocks.TANGOFTERO_EGG.get(), new Item.Properties()));
 
+
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }

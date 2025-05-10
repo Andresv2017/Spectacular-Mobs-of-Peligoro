@@ -1,5 +1,5 @@
 {
-  "parent": "minecraft:block/template_turtle_egg_three",
+  "parent": "smop:block/tangoftero_egg_template_three",
   "textures": {
     "all": "smop:block/tangoftero_egg_stage2"
   }

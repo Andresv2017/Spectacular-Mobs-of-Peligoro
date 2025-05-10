@@ -3,6 +3,8 @@ package net.darkblade.smopmod.entity.custom;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.TangofteroVariant;
 import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroAttackGoal;
+import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroBreedGoal;
+import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroLayEggGoal;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -34,6 +36,7 @@ public class TangofteroEntity extends TamableAnimal {
 
     private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> HAS_EGG = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
 
     public TangofteroEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
@@ -99,6 +102,7 @@ public class TangofteroEntity extends TamableAnimal {
         super.defineSynchedData();
         this.entityData.define(ATTACKING,false);
         this.entityData.define(VARIANT,0);
+        this.entityData.define(HAS_EGG, false);
     }
 
     @Override
@@ -106,7 +110,8 @@ public class TangofteroEntity extends TamableAnimal {
         this.goalSelector.addGoal(0, new FloatGoal(this));
 
         this.goalSelector.addGoal(1, new TangofteroAttackGoal(this,1.0D,true));
-        this.goalSelector.addGoal(1, new BreedGoal(this, 1.15D));
+        this.goalSelector.addGoal(1, new TangofteroBreedGoal(this, 1.0));
+        this.goalSelector.addGoal(2, new TangofteroLayEggGoal(this));
         this.goalSelector.addGoal(2, new TemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
 
         this.goalSelector.addGoal(3, new FollowParentGoal(this, 1.1D));
@@ -168,7 +173,7 @@ public class TangofteroEntity extends TamableAnimal {
         return TangofteroVariant.byId(this.getTypeVariant() & 255);
     }
 
-    private void setVariant(TangofteroVariant variant) {
+    public void setVariant(TangofteroVariant variant) {
         this.entityData.set(VARIANT, variant.getId() & 255);
     }
 
@@ -179,14 +184,17 @@ public class TangofteroEntity extends TamableAnimal {
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 
-    @Override
-    public void finalizeSpawnChildFromBreeding(ServerLevel pLevel, Animal pAnimal, @Nullable AgeableMob pBaby) {
-        TangofteroVariant variant = Util.getRandom(TangofteroVariant.values(), this.random);
-        ((TangofteroEntity) pBaby).setVariant(variant);
-        super.finalizeSpawnChildFromBreeding(pLevel, pAnimal, pBaby);
-    }
-
     public static boolean checkTangofteroSpawnRules(EntityType<TangofteroEntity> p_218242_, LevelAccessor p_218243_, MobSpawnType p_218244_, BlockPos p_218245_, RandomSource p_218246_) {
         return checkAnimalSpawnRules(p_218242_,p_218243_,p_218244_,p_218245_,p_218246_);
+    }
+
+    // ───────────────────────────────────────────────────── Eggs ─────
+
+    public boolean hasEgg() {
+        return this.entityData.get(HAS_EGG);
+    }
+
+    public void setHasEgg(boolean hasEgg) {
+        this.entityData.set(HAS_EGG, hasEgg);
     }
 }
