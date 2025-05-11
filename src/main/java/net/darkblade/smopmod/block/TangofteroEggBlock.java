@@ -99,7 +99,7 @@ public class TangofteroEggBlock extends Block {
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
         if (!level.isClientSide) {
-            level.scheduleTick(pos, this, 100); // 5 segundos
+            level.scheduleTick(pos, this, 6000); // 5 segundos
         }
     }
 
@@ -108,7 +108,7 @@ public class TangofteroEggBlock extends Block {
         int hatch = state.getValue(HATCH);
         if (hatch < 2) {
             level.setBlock(pos, state.setValue(HATCH, hatch + 1), 2);
-            level.scheduleTick(pos, this, 100); // sigue incubando
+            level.scheduleTick(pos, this, 6000); // sigue incubando
         } else {
             int eggCount = state.getValue(EGGS);
 

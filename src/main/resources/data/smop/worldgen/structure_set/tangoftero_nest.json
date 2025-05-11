@@ -1,0 +1,16 @@
+{
+  "structures": [
+    {
+      "structure": "smop:tangoftero_nest",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "smop:tangoftero_random_spread",
+    "salt": 1278435789,
+    "spacing": 160,
+    "separation": 80,
+    "spread_type": "triangular"
+  }
+}
+

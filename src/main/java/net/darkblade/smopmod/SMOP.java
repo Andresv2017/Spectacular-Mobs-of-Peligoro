@@ -12,6 +12,8 @@ import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
 import net.darkblade.smopmod.item.ModItems;
 import net.darkblade.smopmod.packet.RiderActionPacket;
+import net.darkblade.smopmod.structures.StructureRegister;
+import net.darkblade.smopmod.structures.placements.StructurePlacementTypeRegister;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -53,6 +55,10 @@ public class SMOP
         MinecraftForge.EVENT_BUS.register(this);
 
         ModEntities.register(modEventBus);
+
+        StructureRegister.STRUCTURE_TYPE_DEF_REG.register(modEventBus);
+        StructureRegister.STRUCTURE_PIECE_DEF_REG.register(modEventBus);
+        StructurePlacementTypeRegister.STRUCTURE_PLACEMENT_TYPE.register(modEventBus);
 
 
         modEventBus.addListener(this::addCreative);

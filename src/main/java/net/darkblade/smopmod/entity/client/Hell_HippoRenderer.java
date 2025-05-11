@@ -4,10 +4,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.darkblade.smopmod.SMOP;
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_HippoModel<Hell_HippoEntity>> {
 
@@ -54,4 +55,13 @@ public class Hell_HippoRenderer extends MobRenderer<Hell_HippoEntity, Hell_Hippo
         super.render(pEntity, pEntityYaw, pPartialTicks, pMatrixStack, pBuffer, pPackedLight);
     }
 
+    @Override
+    public Hell_HippoModel<Hell_HippoEntity> getModel() {
+        return super.getModel();
+    }
+
+    @Override
+    protected @Nullable RenderType getRenderType(Hell_HippoEntity pLivingEntity, boolean pBodyVisible, boolean pTranslucent, boolean pGlowing) {
+        return super.getRenderType(pLivingEntity, pBodyVisible, pTranslucent, pGlowing);
+    }
 }
