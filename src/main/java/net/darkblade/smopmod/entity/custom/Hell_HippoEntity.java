@@ -80,7 +80,6 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     private static final EntityDataAccessor<Boolean> DATA_SEAWEED;
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_ARMOR = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
-    //private final SleepCycleController<Hell_HippoEntity> sleepCycle = new SleepCycleController<>(this);
     private static final Ingredient FOOD_ITEMS;
 
     // ───────────────────────────────────────────────────── Constructor ─────
@@ -116,6 +115,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     private boolean isWet;
     private boolean isShaking;
     private int shakeTicks;
+    private boolean sleepingDueToEnvironment = false;
 
 
     private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
@@ -192,6 +192,8 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 this.setPreparingSleep(true);
                 sleepPreparingTicks = 100;
 
+                this.sleepingDueToEnvironment = false; // ⚠️ Importante para evitar que lo despierte el sol
+
                 Player p = this.level().getNearestPlayer(this, 10);
                 if (p != null) {
                     p.displayClientMessage(Component.literal("§b[HH] Preparing to sleep..."), true);
@@ -206,11 +208,6 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                     this.setPreparingSleep(false);
                     this.setSleeping(true);
 
-                    // 🔧 Force animation on client.
-                    if (this.level().isClientSide) {
-                        this.sleepAnimationState.start(this.tickCount);
-                    }
-
                     Player p = this.level().getNearestPlayer(this, 10);
                     if (p != null) {
                         p.displayClientMessage(Component.literal("§9[HH] Hell Hippo is now sleeping."), true);
@@ -218,7 +215,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 }
             }
 
-            if (this.isSleeping() && (!this.hasEffect(MobEffects.WEAKNESS) || this.isSaddled())) {
+            if (this.isSleeping() && (!this.sleepingDueToEnvironment) && (!this.hasEffect(MobEffects.WEAKNESS) || this.isSaddled())) {
                 this.setSleeping(false);
                 this.sleepAnimationState.stop();
                 this.awakeningTicks = 30;
@@ -239,6 +236,38 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                     }
                 }
             }
+
+            // ───────────────────────────── Ciclo automático de sueño por día/noche ─────
+
+            boolean isNight = !this.level().isDay();
+            boolean isPeaceful = !this.isVehicle() && !this.isAttacking() && !this.isIntimidating();
+
+            // 🌙 Dormir por ambiente (solo si no fue dormido ya)
+            if (!this.isSleeping() && !this.isPreparingSleep() && !this.isAwakening() && isNight && isPeaceful && !this.sleepingDueToEnvironment) {
+                this.setPreparingSleep(true);
+                this.sleepPreparingTicks = 100;
+                this.sleepingDueToEnvironment = true;
+
+                Player p = this.level().getNearestPlayer(this, 10);
+                if (p != null) {
+                    p.displayClientMessage(Component.literal("§b[HH] The Hell Hippo gets drowsy..."), true);
+                }
+            }
+
+            // ☀️ Despertar por amanecer solo si fue dormido automáticamente
+            if (this.isSleeping() && this.level().isDay() && this.sleepingDueToEnvironment && !this.isAwakening()) {
+                this.setSleeping(false);
+                this.sleepAnimationState.stop();
+                this.awakeningTicks = 30;
+                this.setAwakening(true);
+                this.sleepingDueToEnvironment = false;
+
+                Player p = this.level().getNearestPlayer(this, 10);
+                if (p != null) {
+                    p.displayClientMessage(Component.literal("§e[HH] The sunlight wakes up the Hell Hippo."), true);
+                }
+            }
+
 
             // Sprint toggle and speed adjustment
             boolean isMounted = this.isVehicle();
@@ -725,7 +754,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
 
         this.swing(InteractionHand.MAIN_HAND);
         this.setAttacking(true);
-        this.attackAnimationTimeout = 20;
+        this.attackAnimationTimeout = 25;
         this.mountedAttackCooldownTicks = 40;
 
         if (target != null) {
@@ -778,6 +807,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                                         @Nullable SpawnGroupData spawnData, @Nullable CompoundTag tag) {
         super.finalizeSpawn(level, difficulty, reason, spawnData, tag); // muy importante
         this.setMale(this.getRandom().nextBoolean());
+
         return spawnData;
     }
 
@@ -805,18 +835,6 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     public void setAwakening(boolean value) {
         this.entityData.set(DATA_AWAKENING, value);
     }
-
-    /*
-    @Override
-    public AnimationState getSleepAnimation() {
-        return this.sleepAnimationState;
-    }
-
-    @Override
-    public int tickCount() {
-        return this.tickCount;
-    }
-    */
 
 
     // ───────────────────────────────────────────────────── Animations ─────
@@ -871,8 +889,9 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         }
     }
 
-    private void setupAnimationStates() {
-        // 🔥 Reproducir animación de muerte si está muriendo
+
+    protected void setupAnimationStates() {
+        // 🔥 Animación de muerte
         if (this.isDeadOrDying()) {
             this.stopAllAnimationsExcept(deathAnimationState);
             if (!this.deathAnimationState.isStarted()) {
@@ -881,16 +900,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             return;
         }
 
-        // 🔒 BLOQUEA todo si está en estados de sueño
-        if (this.isPreparingSleep()) {
-            if (!this.sleepPreparingAnimationState.isStarted()) {
-                this.sleepPreparingAnimationState.start(this.tickCount);
-            }
-            this.stopAllAnimationsExcept(sleepPreparingAnimationState);
-            return;
-        }
-
-        // 👇 PRIORIDAD primero awakening, luego sleep
+        // 🟡 PRIORIDAD DE SUEÑO: awakening → preparing → sleeping
         if (this.isAwakening()) {
             if (!this.awakeningAnimationState.isStarted()) {
                 this.awakeningAnimationState.start(this.tickCount);
@@ -899,22 +909,27 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             return;
         }
 
-        if (this.isSleeping()) {
-            this.stopAllAnimationsExcept(sleepAnimationState);
-            if (!this.sleepAnimationState.isStarted()) {
-                this.sleepAnimationState.start(this.tickCount);
-            } else {
-                System.out.println("Already running sleep animation at tick " + this.tickCount);
+        if (this.isPreparingSleep()) {
+            if (!this.sleepPreparingAnimationState.isStarted()) {
+                this.sleepPreparingAnimationState.start(this.tickCount);
             }
+            this.stopAllAnimationsExcept(sleepPreparingAnimationState);
             return;
         }
 
-        // STOP animación de intimidación si NO debe estar activa
+        if (this.isSleeping()) {
+            if (!this.sleepAnimationState.isStarted()) {
+                this.sleepAnimationState.start(this.tickCount);
+            }
+            this.stopAllAnimationsExcept(sleepAnimationState);
+            return;
+        }
+
+        // 🧨 Animación de intimidación
         if (!this.isIntimidating() && this.intimidateAnimationState.isStarted()) {
             this.intimidateAnimationState.stop();
         }
 
-        // Intimidation Logic
         if (this.isIntimidating()) {
             if (!this.intimidateAnimationState.isStarted() || this.tickCount - lastIntimidateAnimationTick >= 150) {
                 this.intimidateAnimationState.start(this.tickCount);
@@ -925,10 +940,11 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             return;
         }
 
+        // 🦷 Animación de ataque
         if (this.isAttacking()) {
             if (!this.attackAnimationState.isStarted()) {
                 this.attackAnimationState.start(this.tickCount);
-                this.attackAnimationTimeout = 20; // duración visual del ataque
+                this.attackAnimationTimeout = 25;
             }
         } else {
             if (this.attackAnimationState.isStarted() && this.attackAnimationTimeout <= 0) {
@@ -940,6 +956,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             this.attackAnimationTimeout--;
         }
 
+        // 🌊 Animaciones bajo agua
         if (this.isInWaterOrBubble()) {
             if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
                 if (!this.swimAnimationState.isStarted()) {
@@ -958,7 +975,10 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 this.idleAnimationState.stop();
                 this.eatAnimationState.stop();
             }
-        } else {
+        }
+
+        // 🚶‍♂️ Animaciones en tierra
+        else {
             if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
                 if (this.isSprinting()) {
                     if (!this.sprintAnimationState.isStarted()) {
@@ -986,6 +1006,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 this.waterIdleAnimationState.stop();
                 this.swimAnimationState.stop();
 
+                // 🍽️ Animación de comer
                 if (this.onGround() && !this.isInWater() && !this.isSleeping() && !this.isAttacking()) {
                     if (this.eatCooldown <= 0 && this.random.nextInt(300) == 0) {
                         this.eatAnimationState.start(this.tickCount);
@@ -1004,6 +1025,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             this.eatAnimationState.stop();
         }
     }
+
 
     @Override
     public void die(DamageSource cause) {
@@ -1055,6 +1077,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         pCompound.putBoolean("Sleeping", this.isSleeping());
         pCompound.putBoolean("PreparingSleep", this.isPreparingSleep());
         pCompound.putBoolean("IsMale", this.isMale());
+        pCompound.putBoolean("SleepingDueToEnvironment", this.sleepingDueToEnvironment);
         if (this.trustingPlayerUUID != null) {
             pCompound.putUUID("TrustingPlayerUUID", this.trustingPlayerUUID);
         }
@@ -1100,6 +1123,9 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         if (pCompound.hasUUID("TrustingPlayerUUID")) {
             this.trustingPlayerUUID = pCompound.getUUID("TrustingPlayerUUID");
         }
+        if (pCompound.contains("SleepingDueToEnvironment")) {
+            this.sleepingDueToEnvironment = pCompound.getBoolean("SleepingDueToEnvironment");
+        }
         this.setChest(pCompound.getBoolean("ChestedHorse"));
         this.createInventory(); // ← muy importante
 
@@ -1118,6 +1144,10 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         }
         if (pCompound.contains("HasArmor")) {
             this.setHasArmor(pCompound.getBoolean("HasArmor")); // ✅ cargar
+        }
+        if (!this.level().isClientSide && !this.level().isDay() && !this.isSleeping()) {
+            this.setSleeping(true);
+            this.sleepingDueToEnvironment = true;
         }
     }
 
