@@ -4,7 +4,9 @@ import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.ai.hell_hippo.*;
+import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
 import net.darkblade.smopmod.entity.inventory.HellHippoInventory;
+import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.darkblade.smopmod.item.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -78,6 +80,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     private static final EntityDataAccessor<Boolean> DATA_SEAWEED;
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_ARMOR = SynchedEntityData.defineId(Hell_HippoEntity.class, EntityDataSerializers.BOOLEAN);
+    //private final SleepCycleController<Hell_HippoEntity> sleepCycle = new SleepCycleController<>(this);
     private static final Ingredient FOOD_ITEMS;
 
     // ───────────────────────────────────────────────────── Constructor ─────
@@ -114,6 +117,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     private boolean isShaking;
     private int shakeTicks;
 
+
     private static final int FEAR_COOLDOWN_DURATION = 20 * 15; // 15 segundos
     private static final int MOUNTED_ATTACK_COOLDOWN = 40;
 
@@ -122,6 +126,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     @Override
     public void tick() {
         super.tick();
+        //sleepCycle.tick();
 
         // 🔥 Execute death animation
         if (this.isDeadOrDying()) {
@@ -178,7 +183,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 }
             }
 
-            if (!this.isSleeping() && !this.isPreparingSleep() && this.hasEffect(MobEffects.WEAKNESS)) {
+            if (!this.isSleeping() && !this.isPreparingSleep() && !this.isAwakening() && this.hasEffect(MobEffects.WEAKNESS)) {
                 this.setIntimidating(false);
                 this.intimidatingTicks = 0;
                 this.intimidateAnimationState.stop();
@@ -528,6 +533,21 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
                 return InteractionResult.SUCCESS;
             }
 
+            // Attempt to feed when Shift + right-click + food + saddled
+            if (this.isSaddled() && pPlayer.isSecondaryUseActive() && itemstack.isEdible()) {
+                if (this.getHealth() < this.getMaxHealth()) {
+                    this.feedingPlayer = pPlayer;
+                    this.pendingFood = itemstack.copy();
+                    this.biteAnimationTimeout = 20;
+                    this.biteAnimationState.start(this.tickCount);
+                    this.level().broadcastEntityEvent(this, (byte) 42);
+                    return InteractionResult.SUCCESS;
+                } else {
+                    pPlayer.displayClientMessage(Component.literal("§eHell Hippo is already at full health."), true);
+                }
+            }
+
+
             if (this.isSaddled() && !this.isVehicle() && !itemstack.isEdible() && !pPlayer.isSecondaryUseActive()) {
                 if (!this.isAwakening()) {
                     pPlayer.startRiding(this);
@@ -785,6 +805,19 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     public void setAwakening(boolean value) {
         this.entityData.set(DATA_AWAKENING, value);
     }
+
+    /*
+    @Override
+    public AnimationState getSleepAnimation() {
+        return this.sleepAnimationState;
+    }
+
+    @Override
+    public int tickCount() {
+        return this.tickCount;
+    }
+    */
+
 
     // ───────────────────────────────────────────────────── Animations ─────
 

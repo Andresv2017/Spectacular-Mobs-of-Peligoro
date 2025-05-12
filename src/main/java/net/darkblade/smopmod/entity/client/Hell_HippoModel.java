@@ -12,7 +12,7 @@ import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 
-public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
+public class Hell_HippoModel<T extends Hell_HippoEntity> extends HierarchicalModel<T> {
 	private final ModelPart Hipopotamo_Infernal;
 	private final ModelPart body;
 	private final ModelPart neck;
@@ -163,25 +163,25 @@ public class Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
 	}
 
 	@Override
-	public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+	public void setupAnim(Hell_HippoEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
 		this.root().getAllParts().forEach(ModelPart::resetPose);
 		this.applyHeadRotation(netHeadYaw, headPitch, ageInTicks);
 
 		//
-		this.animate(((Hell_HippoEntity) entity).idleAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.idle, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).attackAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.attack, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).walkAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.walk, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).swimAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.swim, ageInTicks, 1.2f);
-		this.animate(((Hell_HippoEntity) entity).sprintAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sprint, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).waterIdleAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.widle, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).eatAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.eat, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).biteAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.bite, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).intimidateAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.intimidate, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).shakeAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.shake, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).sleepPreparingAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sleep_preparing, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).sleepAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sleep, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).awakeningAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.awakening, ageInTicks, 1f);
-		this.animate(((Hell_HippoEntity) entity).deathAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.death, ageInTicks, 1f);
+		this.animate(entity.idleAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.idle, ageInTicks, 1f);
+		this.animate(entity.attackAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.attack, ageInTicks, 1f);
+		this.animate(entity.walkAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.walk, ageInTicks, 1f);
+		this.animate(entity.swimAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.swim, ageInTicks, 1.2f);
+		this.animate(entity.sprintAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sprint, ageInTicks, 1f);
+		this.animate(entity.waterIdleAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.widle, ageInTicks, 1f);
+		this.animate(entity.eatAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.eat, ageInTicks, 1f);
+		this.animate(entity.biteAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.bite, ageInTicks, 1f);
+		this.animate(entity.intimidateAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.intimidate, ageInTicks, 1f);
+		this.animate(entity.shakeAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.shake, ageInTicks, 1f);
+		this.animate(entity.sleepPreparingAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sleep_preparing, ageInTicks, 1f);
+		this.animate(entity.sleepAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.sleep, ageInTicks, 1f);
+		this.animate(entity.awakeningAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.awakening, ageInTicks, 1f);
+		this.animate(entity.deathAnimationState, ModAnimationDefinitions.Hell_HippoModelAnimation.death, ageInTicks, 1f);
 	}
 
 	private void applyHeadRotation(float pNetHeadYaw, float pHeadPitch, float pAgeInTicks) {

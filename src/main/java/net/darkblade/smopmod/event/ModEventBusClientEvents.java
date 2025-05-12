@@ -1,6 +1,7 @@
 package net.darkblade.smopmod.event;
 
 import net.darkblade.smopmod.SMOP;
+import net.darkblade.smopmod.entity.client.Baby_Hell_HippoModel;
 import net.darkblade.smopmod.entity.client.Hell_HippoModel;
 import net.darkblade.smopmod.entity.client.ModModelLayers;
 import net.darkblade.smopmod.entity.client.TangofteroModel;
@@ -15,6 +16,8 @@ public class ModEventBusClientEvents {
     public static void registerLayer(EntityRenderersEvent.RegisterLayerDefinitions event){
         event.registerLayerDefinition(ModModelLayers.HELL_HIPPO_LAYER, Hell_HippoModel::createBodyLayer);
         event.registerLayerDefinition(ModModelLayers.TANGOFTERO_LAYER, TangofteroModel::createBodyLayer);
+        event.registerLayerDefinition(ModModelLayers.BABY_HELL_HIPPO_LAYER, Baby_Hell_HippoModel::createBodyLayer);
+
     }
 
 }

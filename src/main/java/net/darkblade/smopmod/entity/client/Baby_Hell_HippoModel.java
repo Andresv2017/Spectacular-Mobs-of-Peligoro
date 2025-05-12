@@ -2,13 +2,16 @@ package net.darkblade.smopmod.entity.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.darkblade.smopmod.entity.animations.ModAnimationDefinitions;
+import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.util.Mth;
 
-public class Baby_Hell_HippoModel<T extends Entity> extends HierarchicalModel<T> {
+
+public class Baby_Hell_HippoModel<T extends Hell_HippoEntity> extends HierarchicalModel<T> {
 
 
     private final ModelPart Hipopotamo_Infernal;
@@ -117,8 +120,24 @@ public class Baby_Hell_HippoModel<T extends Entity> extends HierarchicalModel<T>
     }
 
     @Override
-    public void setupAnim(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(Hell_HippoEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        this.root().getAllParts().forEach(ModelPart::resetPose);
+        this.applyHeadRotation(netHeadYaw, headPitch, ageInTicks);
 
+        this.animate(entity.idleAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.idle, ageInTicks, 1f);
+        //this.animate(entity.walkAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.walk, ageInTicks, 1f);
+        this.animate(entity.attackAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.attack, ageInTicks, 1f);
+        this.animate(entity.swimAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.swim, ageInTicks, 1.2f);
+        this.animate(entity.sprintAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.sprint, ageInTicks, 1f);
+        //this.animate(entity.waterIdleAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.widle, ageInTicks, 1f);
+        this.animate(entity.eatAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.eat, ageInTicks, 1f);
+        this.animate(entity.biteAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.bite, ageInTicks, 1f);
+        this.animate(entity.intimidateAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.intimidate, ageInTicks, 1f);
+        this.animate(entity.shakeAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.shake, ageInTicks, 1f);
+        this.animate(entity.sleepPreparingAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.sleep_preparing, ageInTicks, 1f);
+        this.animate(entity.sleepAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.sleep, ageInTicks, 1f);
+        this.animate(entity.awakeningAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.awakening, ageInTicks, 1f);
+        this.animate(entity.deathAnimationState, ModAnimationDefinitions.Hell_Hippo_BabyAnimation.death, ageInTicks, 1f);
     }
 
     @Override
@@ -126,8 +145,16 @@ public class Baby_Hell_HippoModel<T extends Entity> extends HierarchicalModel<T>
         Hipopotamo_Infernal.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
     }
 
+    private void applyHeadRotation(float netHeadYaw, float headPitch, float ageInTicks) {
+        netHeadYaw = Mth.clamp(netHeadYaw, -30.0F, 30.0F);
+        headPitch = Mth.clamp(headPitch, -25.0F, 45.0F);
+        this.head.yRot = netHeadYaw * ((float)Math.PI / 180F);
+        this.head.xRot = headPitch * ((float)Math.PI / 180F);
+    }
+
+
     @Override
     public ModelPart root() {
-        return null;
+        return Hipopotamo_Infernal;
     }
 }
