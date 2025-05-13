@@ -124,7 +124,6 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
     @Override
     public void tick() {
         super.tick();
-        //sleepCycle.tick();
 
         // 🔥 Execute death animation
         if (this.isDeadOrDying()) {

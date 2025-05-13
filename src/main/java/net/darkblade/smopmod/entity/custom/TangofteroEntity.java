@@ -2,9 +2,9 @@ package net.darkblade.smopmod.entity.custom;
 
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.TangofteroVariant;
-import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroAttackGoal;
-import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroBreedGoal;
-import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroLayEggGoal;
+import net.darkblade.smopmod.entity.ai.tangoftero.*;
+import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
+import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -30,13 +30,17 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-public class TangofteroEntity extends TamableAnimal {
+public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
 
     private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> HAS_EGG = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> PREPARING_SLEEP = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> AWAKENING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
 
     public TangofteroEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
@@ -48,35 +52,58 @@ public class TangofteroEntity extends TamableAnimal {
     public final AnimationState attackAnimationState = new AnimationState();
     public int attackAnimationTimeout = 0;
 
-
     @Override
     public void tick() {
         super.tick();
+        sleepController.tick(this.tickCount);
 
-        if(this.level().isClientSide()) {
+        if (this.level().isClientSide()) {
+            // Iniciar solo si la animación aún no está activa
+            if (this.isPreparingSleep() && !this.preparingSleepState.isStarted()) {
+                this.preparingSleepState.start(this.tickCount);
+                this.sleepState.stop();
+                this.awakeingState.stop();
+            } else if (this.isSleeping() && !this.sleepState.isStarted()) {
+                this.sleepState.start(this.tickCount);
+                this.preparingSleepState.stop();
+                this.awakeingState.stop();
+            } else if (this.isAwakeing() && !this.awakeingState.isStarted()) {
+                this.awakeingState.start(this.tickCount);
+                this.sleepState.stop();
+                this.preparingSleepState.stop();
+            } else if (!this.isSleeping() && !this.isPreparingSleep() && !this.isAwakeing()) {
+                // Estado neutro: detener animaciones de sueño
+                this.sleepState.stop();
+                this.preparingSleepState.stop();
+                this.awakeingState.stop();
+            }
+
+            // 🌀 Animaciones generales si usas otras en setupAnimationStates
             setupAnimationStates();
         }
     }
 
+
     private void setupAnimationStates() {
-        if(this.idleAnimationTimeout <= 0) {
-            this.idleAnimationTimeout = this.random.nextInt(5) + 15;
+        if (this.idleAnimationTimeout <= 0) {
+            this.idleAnimationTimeout = 14;
             this.idleAnimationState.start(this.tickCount);
         } else {
             --this.idleAnimationTimeout;
         }
 
-        if(this.isAttacking() && attackAnimationTimeout <= 0) {
+        if (this.isAttacking() && attackAnimationTimeout <= 0) {
             attackAnimationTimeout = 15; // Length in ticks of your animation
             attackAnimationState.start(this.tickCount);
         } else {
             --this.attackAnimationTimeout;
         }
 
-        if(!this.isAttacking()) {
+        if (!this.isAttacking()) {
             attackAnimationState.stop();
         }
     }
+
 
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createLivingAttributes()
@@ -85,7 +112,6 @@ public class TangofteroEntity extends TamableAnimal {
                 .add(Attributes.MOVEMENT_SPEED, 0.75D)
                 .add(Attributes.ATTACK_SPEED, 0.5D)
                 .add(Attributes.ATTACK_KNOCKBACK, 0.1f)
-                .add(Attributes.ARMOR_TOUGHNESS, 0.1f)
                 .add(Attributes.ATTACK_DAMAGE, 2f);
     }
 
@@ -103,6 +129,9 @@ public class TangofteroEntity extends TamableAnimal {
         this.entityData.define(ATTACKING,false);
         this.entityData.define(VARIANT,0);
         this.entityData.define(HAS_EGG, false);
+        this.entityData.define(SLEEPING, false);
+        this.entityData.define(PREPARING_SLEEP, false);
+        this.entityData.define(AWAKENING, false);
     }
 
     @Override
@@ -112,7 +141,8 @@ public class TangofteroEntity extends TamableAnimal {
         this.goalSelector.addGoal(1, new TangofteroAttackGoal(this,1.0D,true));
         this.goalSelector.addGoal(1, new TangofteroBreedGoal(this, 1.0));
         this.goalSelector.addGoal(2, new TangofteroLayEggGoal(this));
-        this.goalSelector.addGoal(2, new TemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
+
+        this.goalSelector.addGoal(3, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
 
         this.goalSelector.addGoal(3, new FollowParentGoal(this, 1.1D));
 
@@ -155,12 +185,22 @@ public class TangofteroEntity extends TamableAnimal {
     public void addAdditionalSaveData(CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
         pCompound.putInt("Variant", this.getTypeVariant());
+        pCompound.putBoolean("Awakening", this.isAwakeing());
+        pCompound.putBoolean("Sleeping", this.isSleeping());
+        pCompound.putBoolean("PreparingSleep", this.isPreparingSleep());
+
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.entityData.set(VARIANT, pCompound.getInt("Variant"));
+        if (pCompound.contains("Awakening")) {
+            this.setAwakeing(pCompound.getBoolean("Awakening"));
+        }
+        if (pCompound.contains("Sleeping")) this.setSleeping(pCompound.getBoolean("Sleeping"));
+        if (pCompound.contains("PreparingSleep")) this.setPreparingSleep(pCompound.getBoolean("PreparingSleep"));
+
     }
 
     // ───────────────────────────────────────────────────── Variant ─────
@@ -197,4 +237,50 @@ public class TangofteroEntity extends TamableAnimal {
     public void setHasEgg(boolean hasEgg) {
         this.entityData.set(HAS_EGG, hasEgg);
     }
+
+    // ───────────────────────────────────────────────────── SLEEP SYSTEM ─────
+
+    public boolean isSleeping() {
+        return this.entityData.get(SLEEPING);
+    }
+
+    public void setSleeping(boolean sleeping) {
+        this.entityData.set(SLEEPING, sleeping);
+    }
+
+    public boolean isPreparingSleep() {
+        return this.entityData.get(PREPARING_SLEEP);
+    }
+
+    public void setPreparingSleep(boolean preparing) {
+        this.entityData.set(PREPARING_SLEEP, preparing);
+    }
+
+    public boolean isAwakeing() {
+        return this.entityData.get(AWAKENING);
+    }
+
+    public void setAwakeing(boolean value) {
+        this.entityData.set(AWAKENING, value);
+    }
+
+    public final AnimationState preparingSleepState = new AnimationState();
+    public final AnimationState sleepState = new AnimationState();
+    public final AnimationState awakeingState = new AnimationState();
+
+    private final SleepCycleController<TangofteroEntity> sleepController =
+            new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 22,20);
+
+
+    @Override
+    public void travel(Vec3 travelVector) {
+        if (this.isPreparingSleep() || this.isSleeping() || this.isAwakeing()) {
+            this.setDeltaMovement(Vec3.ZERO);
+            this.getNavigation().stop();
+            return;
+        }
+        super.travel(travelVector);
+    }
+
 }
+

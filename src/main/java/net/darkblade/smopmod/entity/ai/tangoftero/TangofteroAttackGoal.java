@@ -19,6 +19,7 @@ public class TangofteroAttackGoal extends MeleeAttackGoal {
         this.entity = (TangofteroEntity) pMob;
     }
 
+
     @Override
     public void start() {
         super.start();

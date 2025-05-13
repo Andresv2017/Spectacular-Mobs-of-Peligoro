@@ -124,9 +124,21 @@ public class TangofteroModel<T extends Entity> extends HierarchicalModel<T> {
         this.root().getAllParts().forEach(ModelPart::resetPose);
         this.applyHeadRotation(netHeadYaw, headPitch, ageInTicks);
 
-        this.animateWalk(ModAnimationDefinitions.TangofteroAnimation.walk, limbSwing, limbSwingAmount, 2f, 2.5f);
-        this.animate(((TangofteroEntity) entity).idleAnimationState, ModAnimationDefinitions.TangofteroAnimation.idle, ageInTicks, 1f);
-        this.animate(((TangofteroEntity) entity).attackAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
+        TangofteroEntity tangoftero = (TangofteroEntity) entity;
+
+        if (tangoftero.isPreparingSleep()) {
+            this.animate(tangoftero.preparingSleepState, ModAnimationDefinitions.TangofteroAnimation.preparing_to_sleep, ageInTicks, 1f);
+        } else if (tangoftero.isSleeping()) {
+            this.animate(tangoftero.sleepState, ModAnimationDefinitions.TangofteroAnimation.sleep, ageInTicks, 1f);
+        } else if (tangoftero.isAwakeing()) {
+            this.animate(tangoftero.awakeingState, ModAnimationDefinitions.TangofteroAnimation.awakening, ageInTicks, 1f);
+        } else if (tangoftero.isAttacking()) {
+            this.animate(tangoftero.attackAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
+        } else {
+            this.animate(tangoftero.idleAnimationState, ModAnimationDefinitions.TangofteroAnimation.idle, ageInTicks, 1f);
+            this.animateWalk(ModAnimationDefinitions.TangofteroAnimation.walk, limbSwing, limbSwingAmount, 2f, 2.5f);
+        }
+
     }
 
     @Override
