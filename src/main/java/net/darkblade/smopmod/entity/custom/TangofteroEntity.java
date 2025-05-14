@@ -78,7 +78,6 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
                 this.awakeingState.stop();
             }
 
-            // 🌀 Animaciones generales si usas otras en setupAnimationStates
             setupAnimationStates();
         }
     }
@@ -282,5 +281,12 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         super.travel(travelVector);
     }
 
+    @Override
+    public void aiStep() {
+        if (this.isSleeping() || this.isPreparingSleep() || this.isAwakeing()) {
+            this.setTarget(null);
+        }
+        super.aiStep();
+    }
 }
 

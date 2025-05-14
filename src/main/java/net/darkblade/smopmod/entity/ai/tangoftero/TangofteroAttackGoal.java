@@ -92,4 +92,13 @@ public class TangofteroAttackGoal extends MeleeAttackGoal {
         entity.attackAnimationTimeout = 0;
         startedAttackAnimation = false;
     }
+
+    @Override
+    public boolean canUse() {
+        if (entity.isSleeping() || entity.isPreparingSleep() || entity.isAwakeing()) {
+            return false;
+        }
+        return super.canUse();
+    }
+
 }

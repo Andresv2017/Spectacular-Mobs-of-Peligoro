@@ -21,8 +21,13 @@ public class TangofteroBreedGoal extends BreedGoal {
         this.partner.resetLove();
     }
 
+
     @Override
     public boolean canUse() {
-        return super.canUse() && !this.tangoftero.hasEgg();
+        if (tangoftero.isSleeping() || tangoftero.isPreparingSleep() || tangoftero.isAwakeing()) {
+            return false;
+        }
+        return super.canUse();
     }
+
 }
