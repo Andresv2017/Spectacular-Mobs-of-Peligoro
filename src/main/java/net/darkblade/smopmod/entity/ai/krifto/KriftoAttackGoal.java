@@ -1,29 +1,31 @@
-package net.darkblade.smopmod.entity.ai.tangoftero;
+package net.darkblade.smopmod.entity.ai.krifto;
 
+import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 
-public class TangofteroAttackGoal extends MeleeAttackGoal {
+public class KriftoAttackGoal extends MeleeAttackGoal {
 
-    private final TangofteroEntity entity;
-    private int attackDelay = 6;
-    private int ticksUntilNextAttack = 9;
+    private final KriftognathusEntity entity;
+    private int attackDelay = 5;
+    private int ticksUntilNextAttack = 10;
     private boolean shouldCountTillNextAttack = false;
     private boolean startedAttackAnimation = false;
 
-    public TangofteroAttackGoal(PathfinderMob pMob, double pSpeedModifier, boolean pFollowingTargetEvenIfNotSeen) {
+    public KriftoAttackGoal(PathfinderMob pMob, double pSpeedModifier, boolean pFollowingTargetEvenIfNotSeen) {
         super(pMob, pSpeedModifier, pFollowingTargetEvenIfNotSeen);
-        this.entity = (TangofteroEntity) pMob;
+        this.entity = (KriftognathusEntity) pMob;
     }
+
 
     @Override
     public void start() {
         super.start();
-        attackDelay = 6;
-        ticksUntilNextAttack = 9;
+        attackDelay = 5;
+        ticksUntilNextAttack = 10;
         shouldCountTillNextAttack = false;
         startedAttackAnimation = false;
         entity.setAttacking(false);

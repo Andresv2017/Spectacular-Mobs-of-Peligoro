@@ -163,6 +163,11 @@ public class KriftognathusModel<T extends Entity> extends HierarchicalModel<T> {
             this.animate(kriftognathus.sleepState, ModAnimationDefinitions.pig_lugAnimation.sleep, ageInTicks, 1f);
         } else if (kriftognathus.isAwakeing()) {
             this.animate(kriftognathus.awakeingState, ModAnimationDefinitions.pig_lugAnimation.awakening, ageInTicks, 1f);
+        } else if (kriftognathus.isAttacking()) {
+            this.animate(kriftognathus.attackAnimationState, ModAnimationDefinitions.pig_lugAnimation.bite, ageInTicks, 1f);
+        } else {
+            this.animate(kriftognathus.idleAnimationState, ModAnimationDefinitions.pig_lugAnimation.lidle, ageInTicks, 1f);
+            this.animateWalk(ModAnimationDefinitions.pig_lugAnimation.walk, limbSwing, limbSwingAmount, 1f, 1f);
         }
     }
 

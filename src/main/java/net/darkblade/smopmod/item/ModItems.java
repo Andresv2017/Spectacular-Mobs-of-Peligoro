@@ -28,6 +28,9 @@ public class ModItems {
     public static final RegistryObject<Item> TANGOFTERO_SPAWN_EGG = ITEMS.register("tangoftero_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.TANGOFTERO, 0x9019e8, 0xe6e1ea, new Item.Properties()));
 
+    public static final RegistryObject<Item> KRIFTOGNATHUS_SPAWN_EGG = ITEMS.register("kriftognathus_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.KIFTO, 0xFFD700, 0xADD8E6, new Item.Properties()));
+
     public static final RegistryObject<Item> HELHIPPO_ARMOR = ITEMS.register("hellhippo_armor", () ->
             new HorseArmorItem(15, "", new Item.Properties().stacksTo(1)));
 

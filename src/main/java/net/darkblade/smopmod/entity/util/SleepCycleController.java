@@ -1,6 +1,6 @@
 package net.darkblade.smopmod.entity.util;
 
-import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
+import net.darkblade.smopmod.entity.api.ISleepingEntity;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
@@ -106,7 +106,4 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
             }
         }
     }
-
 }
-
-

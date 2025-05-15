@@ -33,7 +33,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
+public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, net.darkblade.smopmod.entity.api.ISleepingEntity {
 
     private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
@@ -46,10 +46,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         super(pEntityType, pLevel);
     }
 
-    public final AnimationState idleAnimationState = new AnimationState();
     private int idleAnimationTimeout = 0;
-
-    public final AnimationState attackAnimationState = new AnimationState();
     public int attackAnimationTimeout = 0;
 
     @Override
@@ -61,6 +58,14 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         }
         setupAnimationStates();
     }
+
+    // ───────────────────────────────────────────────────── ANIMATIONS ─────
+
+    public final AnimationState idleAnimationState = new AnimationState();
+    public final AnimationState attackAnimationState = new AnimationState();
+    public final AnimationState preparingSleepState = new AnimationState();
+    public final AnimationState sleepState = new AnimationState();
+    public final AnimationState awakeingState = new AnimationState();
 
     private int lastAnimationChangeTick = -20;
     private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
@@ -134,35 +139,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         }
     }
 
-
-    public static AttributeSupplier.Builder createAttributes() {
-        return Animal.createLivingAttributes()
-                .add(Attributes.MAX_HEALTH,10.0)
-                .add(Attributes.FOLLOW_RANGE,28D)
-                .add(Attributes.MOVEMENT_SPEED, 0.75D)
-                .add(Attributes.ATTACK_SPEED, 0.5D)
-                .add(Attributes.ATTACK_KNOCKBACK, 0.1f)
-                .add(Attributes.ATTACK_DAMAGE, 2f);
-    }
-
-    public void setAttacking(boolean attacking) {
-        this.entityData.set(ATTACKING, attacking);
-    }
-
-    public boolean isAttacking() {
-        return this.entityData.get(ATTACKING);
-    }
-
-    @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(ATTACKING,false);
-        this.entityData.define(VARIANT,0);
-        this.entityData.define(HAS_EGG, false);
-        this.entityData.define(SLEEPING, false);
-        this.entityData.define(PREPARING_SLEEP, false);
-        this.entityData.define(AWAKENING, false);
-    }
+    // ───────────────────────────────────────────────────── GOALS ─────
 
     @Override
     protected void registerGoals() {
@@ -183,32 +160,37 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
     }
 
-    @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return ModEntities.TANGOFTERO.get().create(serverLevel);
+    public static AttributeSupplier.Builder createAttributes() {
+        return Animal.createLivingAttributes()
+                .add(Attributes.MAX_HEALTH,10.0)
+                .add(Attributes.FOLLOW_RANGE,28D)
+                .add(Attributes.MOVEMENT_SPEED, 0.5D)
+                .add(Attributes.ATTACK_SPEED, 0.5D)
+                .add(Attributes.ATTACK_KNOCKBACK, 0.1f)
+                .add(Attributes.ATTACK_DAMAGE, 2f);
     }
 
-    @Override
-    public boolean isFood(ItemStack pStack) {
-        return pStack.is(Items.ROTTEN_FLESH);
+    // ───────────────────────────────────────────────────── ATTACK ─────
+
+    public void setAttacking(boolean attacking) {
+        this.entityData.set(ATTACKING, attacking);
     }
 
-    @Nullable
-    @Override
-    protected SoundEvent getAmbientSound() {
-        return SoundEvents.PARROT_AMBIENT;
+    public boolean isAttacking() {
+        return this.entityData.get(ATTACKING);
     }
 
-    @Nullable
-    @Override
-    protected SoundEvent getHurtSound(DamageSource pDamageSource) {
-        return SoundEvents.PARROT_HURT;
-    }
+    // ───────────────────────────────────────────────────── NBT ─────
 
-    @Nullable
     @Override
-    protected SoundEvent getDeathSound() {
-        return SoundEvents.PARROT_DEATH;
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(ATTACKING,false);
+        this.entityData.define(VARIANT,0);
+        this.entityData.define(HAS_EGG, false);
+        this.entityData.define(SLEEPING, false);
+        this.entityData.define(PREPARING_SLEEP, false);
+        this.entityData.define(AWAKENING, false);
     }
 
     @Override
@@ -229,6 +211,26 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         if (pCompound.contains("Sleeping")) this.setSleeping(pCompound.getBoolean("Sleeping"));
         if (pCompound.contains("PreparingSleep")) this.setPreparingSleep(pCompound.getBoolean("PreparingSleep"));
 
+    }
+
+    // ───────────────────────────────────────────────────── Sounds ─────
+
+    @Nullable
+    @Override
+    protected SoundEvent getAmbientSound() {
+        return SoundEvents.CHICKEN_AMBIENT;
+    }
+
+    @Nullable
+    @Override
+    protected SoundEvent getHurtSound(DamageSource pDamageSource) {
+        return SoundEvents.CHICKEN_HURT;
+    }
+
+    @Nullable
+    @Override
+    protected SoundEvent getDeathSound() {
+        return SoundEvents.CHICKEN_DEATH;
     }
 
     // ───────────────────────────────────────────────────── Variant ─────
@@ -266,6 +268,16 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         this.entityData.set(HAS_EGG, hasEgg);
     }
 
+    @Override
+    public @Nullable AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
+        return ModEntities.TANGOFTERO.get().create(serverLevel);
+    }
+
+    @Override
+    public boolean isFood(ItemStack pStack) {
+        return pStack.is(Items.ROTTEN_FLESH);
+    }
+
     // ───────────────────────────────────────────────────── SLEEP SYSTEM ─────
 
     public boolean isSleeping() {
@@ -292,13 +304,8 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
         this.entityData.set(AWAKENING, value);
     }
 
-    public final AnimationState preparingSleepState = new AnimationState();
-    public final AnimationState sleepState = new AnimationState();
-    public final AnimationState awakeingState = new AnimationState();
-
     private final SleepCycleController<TangofteroEntity> sleepController =
             new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 20,20);
-
 
     @Override
     public void travel(Vec3 travelVector) {
