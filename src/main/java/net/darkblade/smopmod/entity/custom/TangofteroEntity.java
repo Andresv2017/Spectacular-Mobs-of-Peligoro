@@ -16,6 +16,8 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -24,6 +26,7 @@ import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -48,6 +51,8 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
 
     private int idleAnimationTimeout = 0;
     public int attackAnimationTimeout = 0;
+    private int biteAnimationCooldown = 0;
+
 
     @Override
     public void tick() {
@@ -57,6 +62,12 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
             sleepController.tick(this.tickCount);
         }
         setupAnimationStates();
+        if (this.biteAnimationCooldown > 0) {
+            this.biteAnimationCooldown--;
+        }
+        this.biteAnimationState.animateWhen(this.biteAnimationState.isStarted(), this.tickCount);
+
+
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -66,6 +77,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     public final AnimationState preparingSleepState = new AnimationState();
     public final AnimationState sleepState = new AnimationState();
     public final AnimationState awakeingState = new AnimationState();
+    public final AnimationState biteAnimationState = new AnimationState();
 
     private int lastAnimationChangeTick = -20;
     private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
@@ -139,6 +151,16 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         }
     }
 
+    @Override
+    public void handleEntityEvent(byte id) {
+        if (id == 42) {
+            this.biteAnimationState.start(this.tickCount);
+        } else {
+            super.handleEntityEvent(id);
+        }
+    }
+
+
     // ───────────────────────────────────────────────────── GOALS ─────
 
     @Override
@@ -179,6 +201,64 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     public boolean isAttacking() {
         return this.entityData.get(ATTACKING);
     }
+
+    // ───────────────────────────────────────────────────── MOB INTERACT ─────
+
+    private static final Item TAMING_ITEM = Items.RABBIT;
+    private static final Item BREEDING_ITEM = Items.CHICKEN;
+    private static final Item HIGH_HEAL_ITEM = Items.ROTTEN_FLESH;
+
+    @Override
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        Item item = stack.getItem();
+
+        if (item == TAMING_ITEM && !this.isTame()) {
+            if (!player.level().isClientSide) {
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+
+                if (this.random.nextInt(3) == 0) { // 1 en 3 chance
+                    this.tame(player);
+                    this.level().broadcastEntityEvent(this, (byte) 7); // ❤️ corazones
+                } else {
+                    this.level().broadcastEntityEvent(this, (byte) 6); // 💨 humo (fallo)
+                }
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+
+        if (item == BREEDING_ITEM && this.isTame() && !this.isBaby() && !this.isInLove()) {
+            if (!player.level().isClientSide) {
+                this.setInLove(player);
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+        if (item.isEdible() && this.biteAnimationCooldown <= 0) {
+            float healAmount = item == HIGH_HEAL_ITEM ? 6.0F : 3.0F;
+
+            if (this.getHealth() < this.getMaxHealth()) {
+                this.heal(healAmount);
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+
+                this.biteAnimationCooldown = 20;
+                this.level().broadcastEntityEvent(this, (byte) 42); // bite animation
+                this.level().broadcastEntityEvent(this, (byte) 7);  // hearts
+
+                return InteractionResult.sidedSuccess(this.level().isClientSide());
+            }
+        }
+        return super.mobInteract(player, hand);
+    }
+
 
     // ───────────────────────────────────────────────────── NBT ─────
 
@@ -269,14 +349,17 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return ModEntities.TANGOFTERO.get().create(serverLevel);
+    public TangofteroEntity getBreedOffspring(ServerLevel level, AgeableMob partner) {
+        TangofteroEntity baby = ModEntities.TANGOFTERO.get().create(level);
+        if (this.isTame()) {
+            baby.setOwnerUUID(this.getOwnerUUID());
+            baby.setTame(true);
+        }
+        return baby;
     }
 
     @Override
-    public boolean isFood(ItemStack pStack) {
-        return pStack.is(Items.ROTTEN_FLESH);
-    }
+    public boolean isFood(ItemStack stack) {return stack.getItem() == BREEDING_ITEM;}
 
     // ───────────────────────────────────────────────────── SLEEP SYSTEM ─────
 

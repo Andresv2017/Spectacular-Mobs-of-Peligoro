@@ -150,7 +150,7 @@ public class KriftognathusEntity extends TamableAnimal implements ISleepingEntit
         return Animal.createLivingAttributes()
                 .add(Attributes.MAX_HEALTH, 10.0)
                 .add(Attributes.FOLLOW_RANGE, 28.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.25D)
+                .add(Attributes.MOVEMENT_SPEED, 0.20D)
                 .add(Attributes.ATTACK_SPEED, 0.4D)
                 .add(Attributes.ATTACK_KNOCKBACK, 0.1F)
                 .add(Attributes.ATTACK_DAMAGE, 2.0F);
