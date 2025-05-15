@@ -6,6 +6,7 @@ import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
+import net.darkblade.smopmod.entity.client.KriftognathusRender;
 import net.darkblade.smopmod.entity.client.TangofteroRender;
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
@@ -98,6 +99,7 @@ public class SMOP
         {
             EntityRenderers.register(ModEntities.HELL_HIPPO.get(), Hell_HippoRenderer::new);
             EntityRenderers.register(ModEntities.TANGOFTERO.get(), TangofteroRender::new);
+            EntityRenderers.register(ModEntities.KIFTO.get(), KriftognathusRender::new);
             event.enqueueWork(() -> {
                 ItemBlockRenderTypes.setRenderLayer(ModBlocks.TANGOFTERO_EGG.get(), RenderType.cutout());
             });

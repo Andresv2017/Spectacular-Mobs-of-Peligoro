@@ -38,7 +38,7 @@ public class TangofteroRender extends MobRenderer<TangofteroEntity, TangofteroMo
             });
 
     public TangofteroRender(EntityRendererProvider.Context pContext) {
-        super(pContext, new TangofteroModel<TangofteroEntity>(pContext.bakeLayer(ModModelLayers.TANGOFTERO_LAYER)),0.2f);
+        super(pContext, new TangofteroModel<TangofteroEntity>(pContext.bakeLayer(ModModelLayers.TANGOFTERO_LAYER)),.4f);
     }
 
     @Override

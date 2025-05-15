@@ -15,17 +15,19 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
     private final int preparingSleepDuration;
     private final int awakeingDuration;
 
-    private int preparingSleepTimer = 0;
-    private int awakeingTimer = 0;
+    private int preparingSleepTimer = -1;
+    private int awakeingTimer = -1;
     private boolean wasNight = false;
+
+    private final int entityOffset; // Para desfase
 
     public SleepCycleController(
             T entity,
             AnimationState preparingSleepState,
             AnimationState sleepState,
             AnimationState awakeingState,
-            int preparingSleepDuration,  // ← desde entidad
-            int awakeingDuration         // ← desde entidad
+            int preparingSleepDuration,
+            int awakeingDuration
     ) {
         this.entity = entity;
         this.preparingSleepState = preparingSleepState;
@@ -33,7 +35,10 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
         this.awakeingState = awakeingState;
         this.preparingSleepDuration = preparingSleepDuration;
         this.awakeingDuration = awakeingDuration;
+        this.entityOffset = entity.getId() % 10; // desfase leve entre entidades
     }
+
+    private long lastLoggedTime = -1;
 
     public void tick(int tickCount) {
         Level level = entity.level();
@@ -41,46 +46,67 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
 
         long timeOfDay = level.getDayTime() % 24000L;
         boolean isNight = (timeOfDay >= 13000L && timeOfDay <= 23000L);
-        System.out.println("[SleepCycle] Hora: " + timeOfDay + " → isNight = " + isNight);
 
-        // ⬇️ LÓGICA DE ESTADO: SOLO EN SERVIDOR
+        // Solo para depuración
+        if (timeOfDay != lastLoggedTime) {
+            lastLoggedTime = timeOfDay;
+            System.out.println("[SleepCycle] Hora: " + timeOfDay + " → isNight = " + isNight);
+        }
+
+        boolean wasNightBefore = this.wasNight;
+        this.wasNight = isNight;
+
         if (!isClient) {
-            if (isNight && !wasNight && !entity.isSleeping() && !entity.isPreparingSleep()) {
+
+            // 🌙 Iniciar transición a sueño
+            if (isNight && !wasNightBefore && !entity.isSleeping() && !entity.isPreparingSleep() && awakeingTimer < 0 && preparingSleepTimer < 0) {
                 entity.setPreparingSleep(true);
-                preparingSleepTimer = preparingSleepDuration;
                 entity.setSleeping(false);
                 entity.setAwakeing(false);
+                preparingSleepTimer = preparingSleepDuration + entityOffset;
                 System.out.println("[SERVER] → preparing_sleep");
             }
 
-            if (entity.isPreparingSleep() && preparingSleepTimer > 0) {
+            if (entity.isPreparingSleep() && preparingSleepTimer >= 0) {
                 preparingSleepTimer--;
-                if (preparingSleepTimer == 0) {
-                    entity.setPreparingSleep(false);
-                    entity.setSleeping(true);
-                    entity.setAwakeing(false);
-                    System.out.println("[SERVER] → sleep");
+                if (preparingSleepTimer <= 0) {
+                    preparingSleepTimer = -1;
+
+                    // Cancelar si ya amaneció
+                    if (!isNight) {
+                        entity.setPreparingSleep(false);
+                        System.out.println("[SERVER] → cancel preparing_sleep (cambió a día)");
+                    } else if (!entity.isSleeping()) {
+                        entity.setPreparingSleep(false);
+                        entity.setSleeping(true);
+                        System.out.println("[SERVER] → sleep");
+                    }
                 }
             }
 
-            if (!isNight && wasNight && entity.isSleeping()) {
+            // ☀️ Iniciar transición a despertar (solo si timer está inactivo)
+            if (!isNight && wasNightBefore && entity.isSleeping() && awakeingTimer < 0) {
                 entity.setSleeping(false);
                 entity.setPreparingSleep(false);
                 entity.setAwakeing(true);
-                awakeingTimer = awakeingDuration + 1;
+                awakeingTimer = awakeingDuration + entityOffset;
                 System.out.println("[SERVER] → awakeing");
             }
 
-            if (awakeingTimer > 0) {
+            // ⏱️ Finalizar despertar
+            if (awakeingTimer >= 0) {
                 awakeingTimer--;
-                if (awakeingTimer == 0) {
-                    entity.setAwakeing(false);
+                if (awakeingTimer <= 0) {
+                    if (entity.isAwakeing()) {
+                        entity.setAwakeing(false);
+                    }
+                    awakeingTimer = -1;
                     System.out.println("[SERVER] → awakeing ended");
                 }
             }
         }
-
-        wasNight = isNight;
     }
 
 }
+
+

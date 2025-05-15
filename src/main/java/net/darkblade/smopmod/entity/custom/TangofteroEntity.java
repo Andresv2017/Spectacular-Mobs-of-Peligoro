@@ -55,30 +55,61 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
     @Override
     public void tick() {
         super.tick();
-        sleepController.tick(this.tickCount);
 
-        if (this.level().isClientSide()) {
-            // Iniciar solo si la animación aún no está activa
-            if (this.isPreparingSleep() && !this.preparingSleepState.isStarted()) {
-                this.preparingSleepState.start(this.tickCount);
-                this.sleepState.stop();
-                this.awakeingState.stop();
-            } else if (this.isSleeping() && !this.sleepState.isStarted()) {
-                this.sleepState.start(this.tickCount);
-                this.preparingSleepState.stop();
-                this.awakeingState.stop();
-            } else if (this.isAwakeing() && !this.awakeingState.isStarted()) {
-                this.awakeingState.start(this.tickCount);
-                this.sleepState.stop();
-                this.preparingSleepState.stop();
-            } else if (!this.isSleeping() && !this.isPreparingSleep() && !this.isAwakeing()) {
-                // Estado neutro: detener animaciones de sueño
-                this.sleepState.stop();
-                this.preparingSleepState.stop();
-                this.awakeingState.stop();
+        if (!this.level().isClientSide()) {
+            sleepController.tick(this.tickCount);
+        }
+        setupAnimationStates();
+    }
+
+    private int lastAnimationChangeTick = -20;
+    private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+
+        if (!this.level().isClientSide()) return;
+
+        // Anti-colisión: espera unos ticks antes de iniciar otra animación
+        if (this.tickCount - lastAnimationChangeTick < MIN_TICKS_BETWEEN_ANIMS) {
+            return;
+        }
+
+        if (key == PREPARING_SLEEP) {
+            if (this.isPreparingSleep()) {
+                System.out.println("[CLIENT][Sync] → start preparing_sleep");
+                preparingSleepState.start(this.tickCount);
+                sleepState.stop();
+                awakeingState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                preparingSleepState.stop();
             }
+        }
 
-            setupAnimationStates();
+        if (key == SLEEPING) {
+            if (this.isSleeping()) {
+                System.out.println("[CLIENT][Sync] → start sleep");
+                sleepState.start(this.tickCount);
+                preparingSleepState.stop();
+                awakeingState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                sleepState.stop();
+            }
+        }
+
+        if (key == AWAKENING) {
+            if (this.isAwakeing()) {
+                System.out.println("[CLIENT][Sync] → start awakeing");
+                awakeingState.start(this.tickCount);
+                sleepState.stop();
+                preparingSleepState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                awakeingState.stop();
+            }
         }
     }
 
@@ -194,9 +225,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
     public void readAdditionalSaveData(CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.entityData.set(VARIANT, pCompound.getInt("Variant"));
-        if (pCompound.contains("Awakening")) {
-            this.setAwakeing(pCompound.getBoolean("Awakening"));
-        }
+        if (pCompound.contains("Awakening")) {this.setAwakeing(pCompound.getBoolean("Awakening"));}
         if (pCompound.contains("Sleeping")) this.setSleeping(pCompound.getBoolean("Sleeping"));
         if (pCompound.contains("PreparingSleep")) this.setPreparingSleep(pCompound.getBoolean("PreparingSleep"));
 
@@ -268,7 +297,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
     public final AnimationState awakeingState = new AnimationState();
 
     private final SleepCycleController<TangofteroEntity> sleepController =
-            new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 22,20);
+            new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 20,20);
 
 
     @Override

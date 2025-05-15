@@ -13,4 +13,7 @@ public class ModModelLayers {
 
     public static final ModelLayerLocation BABY_HELL_HIPPO_LAYER = new ModelLayerLocation(
             new ResourceLocation(SMOP.MOD_ID,"baby_hell_hippo_layer"),"main");
+
+    public static final ModelLayerLocation KRIFTO = new ModelLayerLocation(
+            new ResourceLocation(SMOP.MOD_ID,"krifto_layer"),"main");
 }

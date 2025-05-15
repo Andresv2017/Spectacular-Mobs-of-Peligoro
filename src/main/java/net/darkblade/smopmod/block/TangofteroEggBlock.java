@@ -173,7 +173,5 @@ public class TangofteroEggBlock extends Block {
             this.decreaseEggs(level, pos, state);
     }
 
-
-
 }
 

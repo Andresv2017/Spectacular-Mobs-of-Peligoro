@@ -10,4 +10,5 @@ public interface ISleepingEntity {
 
     boolean isAwakeing();               // ← nuevo
     void setAwakeing(boolean awakeing); // ← nuevo
+
 }

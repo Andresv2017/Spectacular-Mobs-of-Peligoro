@@ -3,6 +3,8 @@ package net.darkblade.smopmod.event;
 import net.darkblade.smopmod.SMOP;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
+import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
+import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -12,6 +14,7 @@ public class ModEventBusEvents {
     @SubscribeEvent
     public static void registerAttributes (EntityAttributeCreationEvent event) {
         event.put(ModEntities.HELL_HIPPO.get(), Hell_HippoEntity.createAttributes().build());
-        event.put(ModEntities.TANGOFTERO.get(), Hell_HippoEntity.createAttributes().build());
+        event.put(ModEntities.TANGOFTERO.get(), TangofteroEntity.createAttributes().build());
+        event.put(ModEntities.KIFTO.get(), KriftognathusEntity.createAttributes().build());
     }
 }
