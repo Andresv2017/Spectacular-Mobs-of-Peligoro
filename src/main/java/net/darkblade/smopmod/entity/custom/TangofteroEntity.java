@@ -421,8 +421,6 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         super.aiStep();
     }
 
-    protected final Set<EntityType<?>> predatorTypes = new HashSet<>();
-
     @Override
     public Set<EntityType<?>> getInterruptingEntityTypes() {
         return Collections.emptySet(); // No usar por ahora
