@@ -36,7 +36,10 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, net.darkblade.smopmod.entity.api.ISleepingEntity {
+import java.util.HashSet;
+import java.util.Set;
+
+public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
 
     private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
@@ -47,6 +50,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
 
     public TangofteroEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
+        predatorTypes.add(EntityType.ZOMBIE);
     }
 
     private int idleAnimationTimeout = 0;
@@ -407,5 +411,24 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         }
         super.aiStep();
     }
+
+    protected final Set<EntityType<?>> predatorTypes = new HashSet<>();
+
+    public Set<EntityType<?>> getPredatorTypes() {
+        return predatorTypes;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean result = super.hurt(source, amount);
+
+        if (!this.level().isClientSide()) {
+            sleepController.interruptSleep("daño");
+        }
+
+        return result;
+    }
+
+
 }
 

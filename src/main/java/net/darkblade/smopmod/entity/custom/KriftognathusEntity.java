@@ -1,7 +1,6 @@
 package net.darkblade.smopmod.entity.custom;
 
 import net.darkblade.smopmod.entity.ai.krifto.KriftoAttackGoal;
-import net.darkblade.smopmod.entity.ai.tangoftero.TangofteroAttackGoal;
 import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
 import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.nbt.CompoundTag;
@@ -29,7 +28,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-public class KriftognathusEntity extends TamableAnimal implements ISleepingEntity, net.darkblade.smopmod.entity.api.ISleepingEntity {
+import java.util.HashSet;
+import java.util.Set;
+
+public class KriftognathusEntity extends TamableAnimal implements ISleepingEntity {
 
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
@@ -249,4 +251,21 @@ public class KriftognathusEntity extends TamableAnimal implements ISleepingEntit
     public @Nullable AgeableMob getBreedOffspring(ServerLevel level, AgeableMob otherParent) {
         return null;
     }
+
+    protected final Set<EntityType<?>> predatorTypes = new HashSet<>();
+
+    public Set<EntityType<?>> getPredatorTypes() {
+        return predatorTypes;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean result = super.hurt(source, amount);
+
+        if (!this.level().isClientSide()) {
+            sleepController.interruptSleep("daño");
+        }
+        return result;
+    }
+
 }

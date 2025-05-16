@@ -1,9 +1,13 @@
 package net.darkblade.smopmod.entity.util;
 
-import net.darkblade.smopmod.entity.api.ISleepingEntity;
+import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
 import net.minecraft.world.entity.AnimationState;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+
+import java.util.List;
 
 public class SleepCycleController<T extends Animal & ISleepingEntity> {
 
@@ -56,6 +60,11 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
         boolean wasNightBefore = this.wasNight;
         this.wasNight = isNight;
 
+        // 🕒 Contar ticks desde la última interrupción
+        if (ticksSinceLastInterruption >= 0) {
+            ticksSinceLastInterruption++;
+        }
+
         if (!isClient) {
 
             // 🌙 Iniciar transición a sueño
@@ -85,12 +94,31 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
             }
 
             // ☀️ Iniciar transición a despertar (solo si timer está inactivo)
-            if (!isNight && wasNightBefore && entity.isSleeping() && awakeingTimer < 0) {
-                entity.setSleeping(false);
-                entity.setPreparingSleep(false);
-                entity.setAwakeing(true);
-                awakeingTimer = awakeingDuration + entityOffset;
-                System.out.println("[SERVER] → awakeing");
+            if ((entity.isSleeping() || entity.isPreparingSleep()) && awakeingTimer < 0) {
+                List<LivingEntity> nearbyThreats = entity.level().getEntitiesOfClass(LivingEntity.class,
+                        entity.getBoundingBox().inflate(4),
+                        other -> isPredatorOrEnemy(entity, other));
+
+                if (!nearbyThreats.isEmpty()) {
+                    interruptSleep("entidad cercana");
+                }
+            }
+
+            // 🌙 Volver a dormir tras 30s si no hay amenazas cerca
+            if (!entity.isSleeping() && !entity.isPreparingSleep() && !entity.isAwakeing()
+                    && isNight && ticksSinceLastInterruption >= 600
+                    && preparingSleepTimer < 0 && awakeingTimer < 0) {
+
+                List<LivingEntity> nearby = entity.level().getEntitiesOfClass(LivingEntity.class,
+                        entity.getBoundingBox().inflate(4),
+                        other -> isPredatorOrEnemy(entity, other));
+
+                if (nearby.isEmpty()) {
+                    entity.setPreparingSleep(true);
+                    preparingSleepTimer = preparingSleepDuration + entityOffset;
+                    ticksSinceLastInterruption = -1; // 🔁 reiniciar contador
+                    System.out.println("[SERVER] → vuelve a dormir tras 30s sin amenazas");
+                }
             }
 
             // ⏱️ Finalizar despertar
@@ -106,4 +134,30 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
             }
         }
     }
+
+    private int ticksSinceLastInterruption = -1;
+
+    public void interruptSleep(String reason) {
+        if (entity.isSleeping() || entity.isPreparingSleep()) {
+            entity.setSleeping(false);
+            entity.setPreparingSleep(false);
+            entity.setAwakeing(true);
+            awakeingTimer = awakeingDuration + entityOffset;
+
+            ticksSinceLastInterruption = 0; // ← 🟡 reinicia contador
+            System.out.println("[SERVER] → awakeing (interrumpido por " + reason + ")");
+        }
+    }
+
+    private boolean isPredatorOrEnemy(LivingEntity sleeper, LivingEntity other) {
+        if (other == sleeper) return false;
+        if (!other.isAlive()) return false;
+
+        if (sleeper instanceof ISleepingEntity se) {
+            return se.getPredatorTypes().contains(other.getType());
+        }
+
+        return false;
+    }
+
 }
