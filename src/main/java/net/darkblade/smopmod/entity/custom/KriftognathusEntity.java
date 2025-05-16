@@ -252,6 +252,18 @@ public class KriftognathusEntity extends TamableAnimal implements ISleepingEntit
         return null;
     }
 
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean result = super.hurt(source, amount);
+
+        if (!this.level().isClientSide()) {
+            sleepController.interruptSleep("daño");
+        }
+        return result;
+    }
+
+    // ───────────────────────────────────────────────────── SLEEP SYSTEM MOBS INTERRUPT ─────
+
     protected final Set<EntityType<?>> predatorTypes = new HashSet<>();
 
     public Set<EntityType<?>> getInterruptingEntityTypes() {
@@ -263,14 +275,5 @@ public class KriftognathusEntity extends TamableAnimal implements ISleepingEntit
         return false;
     }
 
-    @Override
-    public boolean hurt(DamageSource source, float amount) {
-        boolean result = super.hurt(source, amount);
-
-        if (!this.level().isClientSide()) {
-            sleepController.interruptSleep("daño");
-        }
-        return result;
-    }
 
 }
