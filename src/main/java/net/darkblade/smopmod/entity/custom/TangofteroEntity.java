@@ -43,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -64,8 +65,6 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
 
     private int idleAnimationTimeout = 0;
     public int attackAnimationTimeout = 0;
-    private int biteAnimationCooldown = 0;
-
 
     @Override
     public void tick() {
@@ -75,12 +74,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
             sleepController.tick(this.tickCount);
         }
         setupAnimationStates();
-        if (this.biteAnimationCooldown > 0) {
-            this.biteAnimationCooldown--;
-        }
-        this.biteAnimationState.animateWhen(this.biteAnimationState.isStarted(), this.tickCount);
-
-
+        updateFeedingBehavior();
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -90,7 +84,6 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     public final AnimationState preparingSleepState = new AnimationState();
     public final AnimationState sleepState = new AnimationState();
     public final AnimationState awakeingState = new AnimationState();
-    public final AnimationState biteAnimationState = new AnimationState();
 
     private int lastAnimationChangeTick = -20;
     private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
@@ -167,12 +160,13 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     @Override
     public void handleEntityEvent(byte id) {
         if (id == 42) {
-            this.biteAnimationState.start(this.tickCount);
+            this.biteAnimationState.start(this.tickCount); // bite animatiom
+        } else if (id == 43) {
+            this.roarAnimationState.start(this.tickCount); // roar animatiom
         } else {
             super.handleEntityEvent(id);
         }
     }
-
 
     // ───────────────────────────────────────────────────── GOALS ─────
 
@@ -254,18 +248,8 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         }
 
         if (item.isEdible() && this.biteAnimationCooldown <= 0) {
-            float healAmount = item == HIGH_HEAL_ITEM ? 6.0F : 3.0F;
-
-            if (this.getHealth() < this.getMaxHealth()) {
-                this.heal(healAmount);
-                if (!player.getAbilities().instabuild) {
-                    stack.shrink(1);
-                }
-
-                this.biteAnimationCooldown = 20;
-                this.level().broadcastEntityEvent(this, (byte) 42); // bite animation
-                this.level().broadcastEntityEvent(this, (byte) 7);  // hearts
-
+            if (item.isEdible() && this.biteAnimationCooldown <= 0) {
+                handleFeeding(item, player);
                 return InteractionResult.sidedSuccess(this.level().isClientSide());
             }
         }
@@ -449,5 +433,97 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     public boolean shouldWakeOnPlayerProximity() {
         return false;
     }
+
+    // ───────────────────────────────────────────────────── ROAR ─────
+
+    private static final int ROAR_COOLDOWN_TICKS = 600;
+    private int biteAnimationCooldown = 0;
+    private int roarDelayTicks = -1;
+    private boolean shouldRoar = false;
+    private long lastRoarTime = -ROAR_COOLDOWN_TICKS;
+    private int scareUndeadDelayTicks = -1;
+
+    public final AnimationState biteAnimationState = new AnimationState();
+    public final AnimationState roarAnimationState = new AnimationState();
+
+    private void handleFeeding(Item item, Player player) {
+        boolean isRottenFlesh = item == HIGH_HEAL_ITEM;
+
+        // ✅ Curar solo si no está a full vida
+        if (this.getHealth() < this.getMaxHealth()) {
+            float healAmount = isRottenFlesh ? 6.0F : 3.0F;
+            this.heal(healAmount);
+        }
+
+        // ✅ Consumir el ítem (incluso si está a vida completa)
+        if (!player.getAbilities().instabuild) {
+            player.getMainHandItem().shrink(1);
+        }
+
+        // ✅ Siempre reproducir "bite"
+        this.biteAnimationCooldown = 20;
+        this.level().broadcastEntityEvent(this, (byte) 42); // Bite animation
+        this.level().broadcastEntityEvent(this, (byte) 7);  // Heart particles
+
+        // ✅ Activar "roar" SOLO si es carne podrida, está tameado y cooldown listo
+        if (isRottenFlesh && this.isTame() && this.tickCount - this.lastRoarTime >= ROAR_COOLDOWN_TICKS) {
+            this.roarDelayTicks = 15;
+            this.shouldRoar = true;
+            this.lastRoarTime = this.tickCount;
+        }
+    }
+
+    private void updateFeedingBehavior() {
+        // 🕐 Reducir cooldown de curación
+        if (this.biteAnimationCooldown > 0) {
+            this.biteAnimationCooldown--;
+        }
+
+        // 🧠 Activar animaciones si están en curso
+        this.biteAnimationState.animateWhen(this.biteAnimationState.isStarted(), this.tickCount);
+        this.roarAnimationState.animateWhen(this.roarAnimationState.isStarted(), this.tickCount);
+
+        // 🦷 Lanzar rugido si se cumplió el delay tras la mordida
+        if (this.shouldRoar && this.roarDelayTicks-- <= 0) {
+            this.shouldRoar = false;
+            this.roarDelayTicks = -1;
+
+            if (!this.level().isClientSide) {
+                this.level().broadcastEntityEvent(this, (byte) 43); // animación de rugido en cliente
+                this.scareUndeadDelayTicks = 40; // esperar 2 segundos para activar el efecto
+            }
+        }
+
+        // 🧟 Activar efecto de rugido después del delay
+        if (this.scareUndeadDelayTicks >= 0) {
+            this.scareUndeadDelayTicks--;
+
+            if (this.scareUndeadDelayTicks == 0 && !this.level().isClientSide) {
+                this.scareUndeadMobs(); // ahuyenta mobs no-muertos
+            }
+        }
+    }
+
+
+    private void scareUndeadMobs() {
+        List<Mob> nearbyUndead = this.level().getEntitiesOfClass(Mob.class,
+                this.getBoundingBox().inflate(10),
+                mob -> mob.getMobType() == MobType.UNDEAD && mob.isAlive());
+
+        for (Mob mob : nearbyUndead) {
+            double dx = mob.getX() - this.getX();
+            double dz = mob.getZ() - this.getZ();
+            double distance = Math.sqrt(dx * dx + dz * dz);
+
+            if (distance == 0) continue; // evitar división por cero
+
+            double multiplier = 7.0 / distance; // alejarse exactamente 7 bloques
+            double targetX = mob.getX() + dx * multiplier;
+            double targetZ = mob.getZ() + dz * multiplier;
+
+            mob.getNavigation().moveTo(targetX, mob.getY(), targetZ, 1.2); // velocidad de huida
+        }
+    }
+
 }
 

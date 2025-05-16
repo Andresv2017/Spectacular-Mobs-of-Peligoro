@@ -137,6 +137,7 @@ public class TangofteroModel<T extends Entity> extends HierarchicalModel<T> {
         } else {
             this.animate(tangoftero.idleAnimationState, ModAnimationDefinitions.TangofteroAnimation.idle, ageInTicks, 1f);
             this.animate(tangoftero.biteAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
+            this.animate(tangoftero.roarAnimationState, ModAnimationDefinitions.TangofteroAnimation.roar, ageInTicks, 1f);
             this.animateWalk(ModAnimationDefinitions.TangofteroAnimation.walk, limbSwing, limbSwingAmount, 2f, 2.5f);
         }
 
