@@ -1,6 +1,7 @@
 package net.darkblade.smopmod.entity.interfaces;
 
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Set;
 
@@ -15,5 +16,5 @@ public interface ISleepingEntity {
     boolean isAwakeing();               // ← nuevo
     void setAwakeing(boolean awakeing);// ← nuevo
 
-    Set<EntityType<?>> getPredatorTypes();
+    Set<EntityType<?>> getInterruptingEntityTypes();
 }

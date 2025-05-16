@@ -3,6 +3,8 @@ package net.darkblade.smopmod.entity.custom;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.TangofteroVariant;
 import net.darkblade.smopmod.entity.ai.tangoftero.*;
+import net.darkblade.smopmod.entity.interfaces.ISleepAwareness;
+import net.darkblade.smopmod.entity.interfaces.ISleepThreatEvaluator;
 import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
 import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.Util;
@@ -24,6 +26,9 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -36,10 +41,12 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
-public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
+public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, ISleepThreatEvaluator, ISleepAwareness{
 
     private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
@@ -48,9 +55,11 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
     private static final EntityDataAccessor<Boolean> PREPARING_SLEEP = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> AWAKENING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
 
+    public static final Predicate<LivingEntity> ENEMY_SELECTOR = (entity) -> entity.getMobType() == MobType.UNDEAD;
+
+
     public TangofteroEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
-        predatorTypes.add(EntityType.ZOMBIE);
     }
 
     private int idleAnimationTimeout = 0;
@@ -170,20 +179,20 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-
         this.goalSelector.addGoal(1, new TangofteroAttackGoal(this,1.0D,true));
-        this.goalSelector.addGoal(1, new TangofteroBreedGoal(this, 1.0));
-        this.goalSelector.addGoal(2, new TangofteroLayEggGoal(this));
+        this.goalSelector.addGoal(2, new TangofteroBreedGoal(this, 1.0));
+        this.goalSelector.addGoal(3, new TangofteroLayEggGoal(this));
+        this.goalSelector.addGoal(4, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
+        this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(9, new FollowOwnerGoal(this, 1.0,10.0F,2.0F, false));
 
-        this.goalSelector.addGoal(3, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
-
-        this.goalSelector.addGoal(3, new FollowParentGoal(this, 1.1D));
-
-        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
-
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
+        this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false, TangofteroEntity.ENEMY_SELECTOR));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -414,8 +423,20 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity {
 
     protected final Set<EntityType<?>> predatorTypes = new HashSet<>();
 
-    public Set<EntityType<?>> getPredatorTypes() {
-        return predatorTypes;
+    @Override
+    public Set<EntityType<?>> getInterruptingEntityTypes() {
+        return Collections.emptySet(); // No usar por ahora
+    }
+
+    @Override
+    public boolean shouldInterruptSleepDueTo(LivingEntity nearby) {
+        return nearby.getMobType() == MobType.UNDEAD;
+    }
+
+
+    @Override
+    public boolean shouldWakeOnPlayerProximity() {
+        return false;
     }
 
     @Override

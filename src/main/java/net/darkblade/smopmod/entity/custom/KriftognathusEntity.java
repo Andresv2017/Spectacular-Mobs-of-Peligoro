@@ -1,6 +1,8 @@
 package net.darkblade.smopmod.entity.custom;
 
 import net.darkblade.smopmod.entity.ai.krifto.KriftoAttackGoal;
+import net.darkblade.smopmod.entity.interfaces.ISleepAwareness;
+import net.darkblade.smopmod.entity.interfaces.ISleepThreatEvaluator;
 import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
 import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.nbt.CompoundTag;
@@ -11,10 +13,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.AnimationState;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -31,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-public class KriftognathusEntity extends TamableAnimal implements ISleepingEntity {
+public class KriftognathusEntity extends TamableAnimal implements ISleepingEntity, ISleepAwareness {
 
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
@@ -40,6 +39,7 @@ public class KriftognathusEntity extends TamableAnimal implements ISleepingEntit
 
     public KriftognathusEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
+        predatorTypes.add(EntityType.ZOMBIE);
     }
 
     private int idleAnimationTimeout = 0;
@@ -254,8 +254,13 @@ public class KriftognathusEntity extends TamableAnimal implements ISleepingEntit
 
     protected final Set<EntityType<?>> predatorTypes = new HashSet<>();
 
-    public Set<EntityType<?>> getPredatorTypes() {
+    public Set<EntityType<?>> getInterruptingEntityTypes() {
         return predatorTypes;
+    }
+
+    @Override
+    public boolean shouldWakeOnPlayerProximity() {
+        return false;
     }
 
     @Override
