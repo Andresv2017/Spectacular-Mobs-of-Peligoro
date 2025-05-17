@@ -9,6 +9,7 @@ import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
 import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -21,6 +22,8 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -75,6 +78,15 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         }
         setupAnimationStates();
         updateFeedingBehavior();
+
+        if (!this.level().isClientSide && this.tickCount % 60 == 0 && !this.isTame()) {
+            if (this.isLeader()) {
+                this.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false));
+            } else {
+                // Opcional: eliminar glowing en seguidores
+                this.removeEffect(MobEffects.GLOWING);
+            }
+        }
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -176,17 +188,19 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         this.goalSelector.addGoal(1, new TangofteroAttackGoal(this,1.0D,true));
         this.goalSelector.addGoal(2, new TangofteroBreedGoal(this, 1.0));
         this.goalSelector.addGoal(3, new TangofteroLayEggGoal(this));
-        this.goalSelector.addGoal(4, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
-        this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(9, new FollowOwnerGoal(this, 1.0,10.0F,2.0F, false));
+        this.goalSelector.addGoal(4, new FollowLeaderGoal(this, 1.2,  2f));
+        this.goalSelector.addGoal(5, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
+        this.goalSelector.addGoal(6, new FollowParentGoal(this, 1.1D));
+        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(10, new FollowOwnerGoal(this, 1.0,10.0F,2.0F, false));
 
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-        this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false, TangofteroEntity.ENEMY_SELECTOR));
+        this.targetSelector.addGoal(3, new AssistFlockGoal(this, 10.0));
+        this.targetSelector.addGoal(4, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false, TangofteroEntity.ENEMY_SELECTOR));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -525,5 +539,22 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         }
     }
 
+    // ───────────────────────────────────────────────────── FLOCK BEHAVIOUR ─────
+
+    @Nullable
+    private TangofteroEntity currentLeader;
+
+    public void setLeader(@Nullable TangofteroEntity leader) {
+        this.currentLeader = leader;
+    }
+
+    @Nullable
+    public TangofteroEntity getLeader() {
+        return this.currentLeader;
+    }
+
+    public boolean isLeader() {
+        return this.currentLeader == null;
+    }
 }
 
