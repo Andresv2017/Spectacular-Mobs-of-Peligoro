@@ -158,7 +158,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         }
 
         if (this.isAttacking() && attackAnimationTimeout <= 0) {
-            attackAnimationTimeout = 15; // Length in ticks of your animation
+            attackAnimationTimeout = 16; // Length in ticks of your animation
             attackAnimationState.start(this.tickCount);
         } else {
             --this.attackAnimationTimeout;
@@ -188,7 +188,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         this.goalSelector.addGoal(1, new TangofteroAttackGoal(this,1.0D,true));
         this.goalSelector.addGoal(2, new TangofteroBreedGoal(this, 1.0));
         this.goalSelector.addGoal(3, new TangofteroLayEggGoal(this));
-        this.goalSelector.addGoal(4, new FollowLeaderGoal(this, 1.2,  2f));
+        this.goalSelector.addGoal(4, new FollowLeaderGoal(this, 1.2,  2.5f));
         this.goalSelector.addGoal(5, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
         this.goalSelector.addGoal(6, new FollowParentGoal(this, 1.1D));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.1D));
