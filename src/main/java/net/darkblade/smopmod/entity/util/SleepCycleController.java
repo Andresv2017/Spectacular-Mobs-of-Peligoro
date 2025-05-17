@@ -122,6 +122,11 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
                 }
             }
 
+            // ☀️ Wake up naturally at dawn
+            if (!isNight && wasNightBefore && entity.isSleeping() && awakeingTimer < 0) {
+                interruptSleep("dawn");
+            }
+
             // 🌙 Re-enter sleep cycle after 30 seconds without threats
             if (!entity.isSleeping() && !entity.isPreparingSleep() && !entity.isAwakeing()
                     && isNight && ticksSinceLastInterruption >= 600
