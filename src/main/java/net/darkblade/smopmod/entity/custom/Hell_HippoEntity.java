@@ -3,8 +3,14 @@ package net.darkblade.smopmod.entity.custom;
 import com.google.common.collect.UnmodifiableIterator;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
+import net.darkblade.smopmod.entity.ai.core.FollowGroupLeaderGoal;
 import net.darkblade.smopmod.entity.ai.hell_hippo.*;
+import net.darkblade.smopmod.entity.interfaces.IHasLeader;
+import net.darkblade.smopmod.entity.interfaces.gropu_behaviour.GroupReaction;
+import net.darkblade.smopmod.entity.interfaces.gropu_behaviour.GroupType;
+import net.darkblade.smopmod.entity.interfaces.gropu_behaviour.IGroupBehaviour;
 import net.darkblade.smopmod.entity.inventory.HellHippoInventory;
+import net.darkblade.smopmod.entity.util.GroupUtil;
 import net.darkblade.smopmod.item.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -63,7 +69,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvider,ItemSteerable, Saddleable {
+public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvider,ItemSteerable, Saddleable, IGroupBehaviour, IHasLeader {
 
     // ───────────────────────────────────────────────────── Synced Data ─────
 
@@ -134,6 +140,10 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
         // Block movement if asleep or transitioning
         if (this.isPreparingSleep() || this.isSleeping() || this.isAwakening()) {
             this.setDeltaMovement(Vec3.ZERO);
+        }
+
+        if (!level().isClientSide() && tickCount % 20 == 0) {
+            GroupUtil.reassignLeaderIfNeeded(this);
         }
 
         if (!this.level().isClientSide) {
@@ -1176,6 +1186,7 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
 
         this.goalSelector.addGoal(1,new BreedGoal(this, 1.15D));
         this.goalSelector.addGoal(2, new HellHippoTemptGoal(this, 1.2D, FOOD_ITEMS));
+        this.goalSelector.addGoal(2, new FollowGroupLeaderGoal<>(this, 1.0D, 3.0F, 10.0F));
 
         this.goalSelector.addGoal(2, new HellHippoWaterStrollGoal(this, 2.0));
 
@@ -1375,7 +1386,36 @@ public class Hell_HippoEntity extends AbstractChestedHorse implements MenuProvid
             this.setHasArmor(!this.inventory.getItem(1).isEmpty());
         }
     }
+
     public static boolean checkHell_HippoSpawnRules(EntityType<Hell_HippoEntity> p_218242_, LevelAccessor p_218243_, MobSpawnType p_218244_, BlockPos p_218245_, RandomSource p_218246_) {
         return checkAnimalSpawnRules(p_218242_,p_218243_,p_218244_,p_218245_,p_218246_);
     }
+
+    // ───────────────────────────────────────────────────── LEADER ─────
+
+    private LivingEntity groupLeader;
+
+    @Override
+    public LivingEntity getGroupLeader() {
+        return groupLeader;
+    }
+
+    @Override
+    public void setGroupLeader(LivingEntity leader) {
+        this.groupLeader = leader;
+    }
+
+    // ───────────────────────────────────────────────────── Group Behaviour ─────
+
+    @Override
+    public GroupType getGroupType() {
+        return GroupType.PACK;
+    }
+
+    @Override
+    public GroupReaction getGroupReaction() {
+        return GroupReaction.DEFENSIVE;
+    }
+
+
 }

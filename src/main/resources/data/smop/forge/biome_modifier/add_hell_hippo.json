@@ -7,7 +7,7 @@
   "spawners": {
     "type": "smop:hell_hippo",
     "weight": 25,
-    "maxCount": 2,
+    "maxCount": 3,
     "minCount": 1
   }
 }

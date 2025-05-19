@@ -37,6 +37,9 @@ public class ModItems {
     public static final RegistryObject<Item> TANGOFTERO_EGG_ITEM = ITEMS.register("tangoftero_egg",
             () -> new BlockItem(ModBlocks.TANGOFTERO_EGG.get(), new Item.Properties()));
 
+    public static final RegistryObject<Item> KRIFTO_EGG_ITEM = ITEMS.register("krifto_egg",
+            () -> new BlockItem(ModBlocks.KRIFFO_EGG.get(), new Item.Properties()));
+
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

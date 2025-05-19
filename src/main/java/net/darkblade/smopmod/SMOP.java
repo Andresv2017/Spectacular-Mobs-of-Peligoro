@@ -5,10 +5,12 @@ import com.mojang.logging.LogUtils;
 import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.effect.ModEffects;
 import net.darkblade.smopmod.entity.ModEntities;
-import net.darkblade.smopmod.entity.client.Hell_HippoRenderer;
-import net.darkblade.smopmod.entity.client.KriftognathusRender;
-import net.darkblade.smopmod.entity.client.TangofteroRender;
+import net.darkblade.smopmod.entity.client.hell_hippo.Hell_HippoRenderer;
+import net.darkblade.smopmod.entity.client.krifto.KriftognathusRender;
+import net.darkblade.smopmod.entity.client.niras.NirasmosaurusRender;
+import net.darkblade.smopmod.entity.client.tango.TangofteroRender;
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
+import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
 import net.darkblade.smopmod.item.ModItems;
@@ -77,6 +79,12 @@ public class SMOP
             SpawnPlacements.register(ModEntities.HELL_HIPPO.get(), SpawnPlacements.Type.ON_GROUND,
                     Heightmap.Types.MOTION_BLOCKING, Hell_HippoEntity::checkHell_HippoSpawnRules);
         });
+
+        event.enqueueWork(() -> {
+            SpawnPlacements.register(ModEntities.KIFTO.get(), SpawnPlacements.Type.ON_GROUND,
+                    Heightmap.Types.MOTION_BLOCKING, KriftognathusEntity::checkKriftoSpawnRules);
+        });
+
     }
 
     // Add the example block item to the building blocks tab
@@ -100,8 +108,12 @@ public class SMOP
             EntityRenderers.register(ModEntities.HELL_HIPPO.get(), Hell_HippoRenderer::new);
             EntityRenderers.register(ModEntities.TANGOFTERO.get(), TangofteroRender::new);
             EntityRenderers.register(ModEntities.KIFTO.get(), KriftognathusRender::new);
+            EntityRenderers.register(ModEntities.NIRAS.get(), NirasmosaurusRender::new);
             event.enqueueWork(() -> {
                 ItemBlockRenderTypes.setRenderLayer(ModBlocks.TANGOFTERO_EGG.get(), RenderType.cutout());
+            });
+            event.enqueueWork(() -> {
+                ItemBlockRenderTypes.setRenderLayer(ModBlocks.KRIFFO_EGG.get(), RenderType.cutout());
             });
         }
     }

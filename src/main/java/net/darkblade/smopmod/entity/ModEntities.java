@@ -3,6 +3,7 @@ package net.darkblade.smopmod.entity;
 import net.darkblade.smopmod.SMOP;
 import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
+import net.darkblade.smopmod.entity.custom.NirasmosaurusEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -27,6 +28,9 @@ public class ModEntities {
             ENTITY_TYPES.register("kifto", () -> EntityType.Builder.of(KriftognathusEntity::new, MobCategory.CREATURE)
                     .sized(1f, 1f).build("kifto"));
 
+    public static final RegistryObject<EntityType<NirasmosaurusEntity>> NIRAS =
+            ENTITY_TYPES.register("niras", () -> EntityType.Builder.of(NirasmosaurusEntity::new, MobCategory.CREATURE)
+                    .sized(1f, 1f).build("niras"));
 
     public static void register(IEventBus eventBus){
         ENTITY_TYPES.register(eventBus);

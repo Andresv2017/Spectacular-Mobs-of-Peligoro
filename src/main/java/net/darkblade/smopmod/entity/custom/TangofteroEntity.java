@@ -1,15 +1,18 @@
 package net.darkblade.smopmod.entity.custom;
 
-import net.darkblade.smopmod.entity.ModEntities;
+import net.darkblade.smopmod.block.ModBlocks;
+import net.darkblade.smopmod.entity.BaseEntity;
 import net.darkblade.smopmod.entity.TangofteroVariant;
+import net.darkblade.smopmod.entity.ai.core.FollowOwnerBaseGoal;
+import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
+import net.darkblade.smopmod.entity.ai.core.GenericLayEggGoal;
 import net.darkblade.smopmod.entity.ai.tangoftero.*;
-import net.darkblade.smopmod.entity.interfaces.ISleepAwareness;
-import net.darkblade.smopmod.entity.interfaces.ISleepThreatEvaluator;
-import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
+import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
+import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepThreatEvaluator;
+import net.darkblade.smopmod.entity.interfaces.variants.RandomVariantCapable;
 import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -22,8 +25,6 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -41,23 +42,17 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, ISleepThreatEvaluator, ISleepAwareness{
+public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluator, ISleepAwareness, RandomVariantCapable {
 
     private static final EntityDataAccessor<Integer> VARIANT = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> HAS_EGG = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> PREPARING_SLEEP = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> AWAKENING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
 
     public static final Predicate<LivingEntity> ENEMY_SELECTOR = (entity) -> entity.getMobType() == MobType.UNDEAD;
 
@@ -73,20 +68,9 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide()) {
-            sleepController.tick(this.tickCount);
-        }
         setupAnimationStates();
         updateFeedingBehavior();
 
-        if (!this.level().isClientSide && this.tickCount % 60 == 0 && !this.isTame()) {
-            if (this.isLeader()) {
-                this.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false));
-            } else {
-                // Opcional: eliminar glowing en seguidores
-                this.removeEffect(MobEffects.GLOWING);
-            }
-        }
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -95,7 +79,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     public final AnimationState attackAnimationState = new AnimationState();
     public final AnimationState preparingSleepState = new AnimationState();
     public final AnimationState sleepState = new AnimationState();
-    public final AnimationState awakeingState = new AnimationState();
+    public final AnimationState awakeningState = new AnimationState();
 
     private int lastAnimationChangeTick = -20;
     private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
@@ -116,7 +100,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
                 System.out.println("[CLIENT][Sync] → start preparing_sleep");
                 preparingSleepState.start(this.tickCount);
                 sleepState.stop();
-                awakeingState.stop();
+                awakeningState.stop();
                 lastAnimationChangeTick = this.tickCount;
             } else {
                 preparingSleepState.stop();
@@ -128,7 +112,7 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
                 System.out.println("[CLIENT][Sync] → start sleep");
                 sleepState.start(this.tickCount);
                 preparingSleepState.stop();
-                awakeingState.stop();
+                awakeningState.stop();
                 lastAnimationChangeTick = this.tickCount;
             } else {
                 sleepState.stop();
@@ -138,12 +122,12 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         if (key == AWAKENING) {
             if (this.isAwakeing()) {
                 System.out.println("[CLIENT][Sync] → start awakeing");
-                awakeingState.start(this.tickCount);
+                awakeningState.start(this.tickCount);
                 sleepState.stop();
                 preparingSleepState.stop();
                 lastAnimationChangeTick = this.tickCount;
             } else {
-                awakeingState.stop();
+                awakeningState.stop();
             }
         }
     }
@@ -186,15 +170,14 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new TangofteroAttackGoal(this,1.0D,true));
-        this.goalSelector.addGoal(2, new TangofteroBreedGoal(this, 1.0));
-        this.goalSelector.addGoal(3, new TangofteroLayEggGoal(this));
-        this.goalSelector.addGoal(4, new FollowLeaderGoal(this, 1.2,  2.5f));
+        this.goalSelector.addGoal(2, new GenericBreedGoal<>(this, 1.0));
+        this.goalSelector.addGoal(3, new GenericLayEggGoal<>(this, ModBlocks.TANGOFTERO_EGG.get()));
         this.goalSelector.addGoal(5, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
         this.goalSelector.addGoal(6, new FollowParentGoal(this, 1.1D));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.1D));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 3f));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(10, new FollowOwnerGoal(this, 1.0,10.0F,2.0F, false));
+        this.goalSelector.addGoal(10, new FollowOwnerBaseGoal(this, 1.0D, 10.0F, 2.0F, false, false));
 
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
@@ -277,31 +260,19 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(ATTACKING,false);
-        this.entityData.define(VARIANT,0);
-        this.entityData.define(HAS_EGG, false);
-        this.entityData.define(SLEEPING, false);
-        this.entityData.define(PREPARING_SLEEP, false);
-        this.entityData.define(AWAKENING, false);
+        this.entityData.define(VARIANT, 0);
     }
 
     @Override
     public void addAdditionalSaveData(CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
-        pCompound.putInt("Variant", this.getTypeVariant());
-        pCompound.putBoolean("Awakening", this.isAwakeing());
-        pCompound.putBoolean("Sleeping", this.isSleeping());
-        pCompound.putBoolean("PreparingSleep", this.isPreparingSleep());
-
+        pCompound.putInt("Variant", this.getVariantId());
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
-        this.entityData.set(VARIANT, pCompound.getInt("Variant"));
-        if (pCompound.contains("Awakening")) {this.setAwakeing(pCompound.getBoolean("Awakening"));}
-        if (pCompound.contains("Sleeping")) this.setSleeping(pCompound.getBoolean("Sleeping"));
-        if (pCompound.contains("PreparingSleep")) this.setPreparingSleep(pCompound.getBoolean("PreparingSleep"));
-
+        this.setVariantId(pCompound.getInt("Variant"));
     }
 
     // ───────────────────────────────────────────────────── Sounds ─────
@@ -326,16 +297,32 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
 
     // ───────────────────────────────────────────────────── Variant ─────
 
-    private int getTypeVariant() {
+    @Override
+    public void setRandomVariant(RandomSource random) {
+        int id = random.nextInt(TangofteroVariant.values().length);
+        setVariantId(id);
+    }
+
+    @Override
+    public int getVariantId() {
         return this.entityData.get(VARIANT);
     }
 
+    public void setVariantId(int id) {
+        this.entityData.set(VARIANT, id);
+    }
+
     public TangofteroVariant getVariant() {
-        return TangofteroVariant.byId(this.getTypeVariant() & 255);
+        return TangofteroVariant.byId(getVariantId());
     }
 
     public void setVariant(TangofteroVariant variant) {
-        this.entityData.set(VARIANT, variant.getId() & 255);
+        setVariantId(variant.getId());
+    }
+
+    @Override
+    public int getMaxVariants() {
+        return TangofteroVariant.values().length;
     }
 
     @Override
@@ -351,22 +338,9 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
 
     // ───────────────────────────────────────────────────── Eggs ─────
 
-    public boolean hasEgg() {
-        return this.entityData.get(HAS_EGG);
-    }
-
-    public void setHasEgg(boolean hasEgg) {
-        this.entityData.set(HAS_EGG, hasEgg);
-    }
-
     @Override
     public TangofteroEntity getBreedOffspring(ServerLevel level, AgeableMob partner) {
-        TangofteroEntity baby = ModEntities.TANGOFTERO.get().create(level);
-        if (this.isTame()) {
-            baby.setOwnerUUID(this.getOwnerUUID());
-            baby.setTame(true);
-        }
-        return baby;
+        return null;
     }
 
     @Override
@@ -374,74 +348,21 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
 
     // ───────────────────────────────────────────────────── SLEEP SYSTEM ─────
 
-    public boolean isSleeping() {
-        return this.entityData.get(SLEEPING);
-    }
-
-    public void setSleeping(boolean sleeping) {
-        this.entityData.set(SLEEPING, sleeping);
-    }
-
-    public boolean isPreparingSleep() {
-        return this.entityData.get(PREPARING_SLEEP);
-    }
-
-    public void setPreparingSleep(boolean preparing) {
-        this.entityData.set(PREPARING_SLEEP, preparing);
-    }
-
-    public boolean isAwakeing() {
-        return this.entityData.get(AWAKENING);
-    }
-
-    public void setAwakeing(boolean value) {
-        this.entityData.set(AWAKENING, value);
-    }
-
-    private final SleepCycleController<TangofteroEntity> sleepController =
-            new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 20,20);
 
     @Override
-    public void travel(Vec3 travelVector) {
-        if (this.isPreparingSleep() || this.isSleeping() || this.isAwakeing()) {
-            this.setDeltaMovement(Vec3.ZERO);
-            this.getNavigation().stop();
-            return;
-        }
-        super.travel(travelVector);
+    protected SleepCycleController<BaseEntity> createSleepController() {
+        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 20, 20);
     }
-
-    @Override
-    public void aiStep() {
-        if (this.isSleeping() || this.isPreparingSleep() || this.isAwakeing()) {
-            this.setTarget(null);
-        }
-        super.aiStep();
-    }
-
-    @Override
-    public boolean hurt(DamageSource source, float amount) {
-        boolean result = super.hurt(source, amount);
-
-        if (!this.level().isClientSide()) {
-            sleepController.interruptSleep("daño");
-        }
-
-        return result;
-    }
-
-    // ───────────────────────────────────────────────────── SLEEP SYSTEM MOBS INTERRUPT ─────
 
     @Override
     public Set<EntityType<?>> getInterruptingEntityTypes() {
-        return Collections.emptySet(); // No usar por ahora
+        return Collections.emptySet(); // STATIC
     }
 
     @Override
     public boolean shouldInterruptSleepDueTo(LivingEntity nearby) {
         return nearby.getMobType() == MobType.UNDEAD;
     }
-
 
     @Override
     public boolean shouldWakeOnPlayerProximity() {
@@ -539,22 +460,5 @@ public class TangofteroEntity extends TamableAnimal implements ISleepingEntity, 
         }
     }
 
-    // ───────────────────────────────────────────────────── FLOCK BEHAVIOUR ─────
-
-    @Nullable
-    private TangofteroEntity currentLeader;
-
-    public void setLeader(@Nullable TangofteroEntity leader) {
-        this.currentLeader = leader;
-    }
-
-    @Nullable
-    public TangofteroEntity getLeader() {
-        return this.currentLeader;
-    }
-
-    public boolean isLeader() {
-        return this.currentLeader == null;
-    }
 }
 

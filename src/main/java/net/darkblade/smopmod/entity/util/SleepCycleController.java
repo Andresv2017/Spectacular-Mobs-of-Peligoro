@@ -1,8 +1,8 @@
 package net.darkblade.smopmod.entity.util;
 
-import net.darkblade.smopmod.entity.interfaces.ISleepAwareness;
-import net.darkblade.smopmod.entity.interfaces.ISleepThreatEvaluator;
-import net.darkblade.smopmod.entity.interfaces.ISleepingEntity;
+import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
+import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepThreatEvaluator;
+import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepingEntity;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.Animal;
@@ -34,16 +34,21 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
 
     // Duration (in ticks) for each sleep transition animation
     private final int preparingSleepDuration;
-    private final int awakeingDuration;
+    private final int awakeningDuration;
 
     // Internal timers for transition control
     private int preparingSleepTimer = -1;
-    private int awakeingTimer = -1;
+    private int awakeningTimer = -1;
     private int ticksSinceLastInterruption = -1;
     private boolean wasNight = false;
 
+    // Use 100 for testing (5 seconds), set to 600 for normal gameplay (30s)
+    private static final int SLEEP_DELAY_TICKS = 100;
+
     // Small offset to desynchronize multiple entities
     private final int entityOffset;
+
+    private int ticksSinceNoTarget = -1;
 
     public SleepCycleController(
             T entity,
@@ -58,7 +63,7 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
         this.sleepState = sleepState;
         this.awakeingState = awakeingState;
         this.preparingSleepDuration = preparingSleepDuration;
-        this.awakeingDuration = awakeingDuration;
+        this.awakeningDuration = awakeingDuration;
         this.entityOffset = entity.getId() % 10; // Light offset to prevent synchronized transitions
     }
 
@@ -72,35 +77,51 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
         long timeOfDay = level.getDayTime() % 24000L;
         boolean isNight = (timeOfDay >= 13000L && timeOfDay <= 23000L);
 
-        // Track night changes
+        // Track previous night state
         boolean wasNightBefore = this.wasNight;
         this.wasNight = isNight;
 
-        // Count ticks since last interruption
+        // Count ticks since last sleep interruption
         if (ticksSinceLastInterruption >= 0) {
             ticksSinceLastInterruption++;
         }
 
+        // Count ticks since the entity has had no target
         if (!isClient) {
+            if (entity.getTarget() == null) {
+                if (ticksSinceNoTarget >= 0) {
+                    ticksSinceNoTarget++;
+                } else {
+                    ticksSinceNoTarget = 0;
+                }
+            } else {
+                ticksSinceNoTarget = -1; // Reset if target is active
+            }
 
-            // 🌙 Begin sleep preparation if night starts and entity is idle
-            if (isNight && !wasNightBefore && !entity.isSleeping() && !entity.isPreparingSleep()
-                    && awakeingTimer < 0 && preparingSleepTimer < 0) {
+            // 🌙 Try to sleep if it’s night and entity has been peaceful for 30s
+            if (isNight
+                    && !entity.isSleeping()
+                    && !entity.isPreparingSleep()
+                    && awakeningTimer < 0
+                    && preparingSleepTimer < 0
+                    && entity.getTarget() == null
+                    && ticksSinceNoTarget >= SLEEP_DELAY_TICKS) {
+
                 entity.setPreparingSleep(true);
                 entity.setSleeping(false);
                 entity.setAwakeing(false);
                 preparingSleepTimer = preparingSleepDuration + entityOffset;
+                ticksSinceNoTarget = -1; // Reset sleep eligibility
                 System.out.println("[SERVER] → preparing_sleep");
             }
 
-            // ⏳ Complete transition from preparingSleep → sleep
+            // ⏳ Finish preparing sleep
             if (entity.isPreparingSleep() && preparingSleepTimer >= 0) {
                 preparingSleepTimer--;
                 if (preparingSleepTimer <= 0) {
                     preparingSleepTimer = -1;
 
                     if (!isNight) {
-                        // Cancel transition if night ended mid-preparation
                         entity.setPreparingSleep(false);
                         System.out.println("[SERVER] → cancel preparing_sleep (switched to day)");
                     } else if (!entity.isSleeping()) {
@@ -111,8 +132,8 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
                 }
             }
 
-            // ☀️ Wake up if a threat or player is nearby while sleeping
-            if ((entity.isSleeping() || entity.isPreparingSleep()) && awakeingTimer < 0) {
+            // 🧟 Wake up if threat or player nearby
+            if ((entity.isSleeping() || entity.isPreparingSleep()) && awakeningTimer < 0) {
                 List<LivingEntity> threats = entity.level().getEntitiesOfClass(LivingEntity.class,
                         entity.getBoundingBox().inflate(4),
                         other -> shouldInterruptSleep(entity, other));
@@ -123,14 +144,15 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
             }
 
             // ☀️ Wake up naturally at dawn
-            if (!isNight && wasNightBefore && entity.isSleeping() && awakeingTimer < 0) {
+            if (!isNight && wasNightBefore && entity.isSleeping() && awakeningTimer < 0) {
                 interruptSleep("dawn");
             }
 
-            // 🌙 Re-enter sleep cycle after 30 seconds without threats
+            // 💤 Sleep again after 30s without threats or combat
             if (!entity.isSleeping() && !entity.isPreparingSleep() && !entity.isAwakeing()
-                    && isNight && ticksSinceLastInterruption >= 600
-                    && preparingSleepTimer < 0 && awakeingTimer < 0) {
+                    && isNight && ticksSinceLastInterruption >= SLEEP_DELAY_TICKS
+                    && ticksSinceNoTarget >= SLEEP_DELAY_TICKS
+                    && preparingSleepTimer < 0 && awakeningTimer < 0) {
 
                 List<LivingEntity> threats = entity.level().getEntitiesOfClass(LivingEntity.class,
                         entity.getBoundingBox().inflate(4),
@@ -140,23 +162,25 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
                     entity.setPreparingSleep(true);
                     preparingSleepTimer = preparingSleepDuration + entityOffset;
                     ticksSinceLastInterruption = -1;
-                    System.out.println("[SERVER] → back to sleep after 30s without threats");
+                    ticksSinceNoTarget = -1;
+                    System.out.println("[SERVER] → back to sleep after 30s no threats or combat");
                 }
             }
 
-            // ⏱️ Finalize awakeing state
-            if (awakeingTimer >= 0) {
-                awakeingTimer--;
-                if (awakeingTimer <= 0) {
+            // ⏱️ Finish awakening transition
+            if (awakeningTimer >= 0) {
+                awakeningTimer--;
+                if (awakeningTimer <= 0) {
                     if (entity.isAwakeing()) {
                         entity.setAwakeing(false);
                     }
-                    awakeingTimer = -1;
+                    awakeningTimer = -1;
                     System.out.println("[SERVER] → awakeing ended");
                 }
             }
         }
     }
+
 
     /**
      * Forces the entity to wake up, transitioning into the awakeing state
@@ -169,8 +193,11 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
             entity.setSleeping(false);
             entity.setPreparingSleep(false);
             entity.setAwakeing(true);
-            awakeingTimer = awakeingDuration + entityOffset;
+            awakeningTimer = awakeningDuration + entityOffset;
+
             ticksSinceLastInterruption = 0;
+            ticksSinceNoTarget = 0; // 🔁 Resets combat delay after interruption
+
             System.out.println("[SERVER] → awakeing (interrupted by " + reason + ")");
         }
     }
@@ -194,12 +221,12 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
             return true; // Default: player always wakes up entities unless overridden
         }
 
-        // 🔁 Custom sleep interruption logic
+        // 🔁 Custom - Gropus - UNDEAD - ARTRHOPOD
         if (sleeperEntity instanceof ISleepThreatEvaluator evaluator) {
             return evaluator.shouldInterruptSleepDueTo(nearbyEntity);
         }
 
-        // 📋 Fallback to fixed interrupting types
+        // 📋 Static - Declare mob by mob CAT, COW , ETC
         if (sleeperEntity instanceof ISleepingEntity sleeper) {
             return sleeper.getInterruptingEntityTypes().contains(nearbyEntity.getType());
         }

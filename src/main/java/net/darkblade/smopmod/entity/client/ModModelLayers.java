@@ -16,4 +16,7 @@ public class ModModelLayers {
 
     public static final ModelLayerLocation KRIFTO = new ModelLayerLocation(
             new ResourceLocation(SMOP.MOD_ID,"krifto_layer"),"main");
+
+    public static final ModelLayerLocation NIRAS = new ModelLayerLocation(
+            new ResourceLocation(SMOP.MOD_ID,"niras_layer"),"main");
 }

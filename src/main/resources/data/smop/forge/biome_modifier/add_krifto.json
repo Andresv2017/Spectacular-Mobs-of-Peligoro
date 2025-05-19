@@ -1,0 +1,18 @@
+{
+  "type": "forge:add_spawns",
+  "biomes": [
+    "minecraft:jungle",
+    "minecraft:sparse_jungle",
+    "minecraft:wooded_badlands",
+    "minecraft:eroded_badlands",
+    "minecraft:badlands",
+    "minecraft:snowy_taiga",
+    "minecraft:grove"
+  ],
+  "spawners": {
+    "type": "smop:kifto",
+    "weight": 25,
+    "maxCount": 5,
+    "minCount": 3
+  }
+}
