@@ -1,10 +1,12 @@
 package net.darkblade.smopmod.structures;
 
 import com.mojang.serialization.Codec;
+import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.entity.ModEntities;
 import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -14,6 +16,8 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
@@ -140,6 +144,16 @@ public class TangofteroNestStructure extends Structure {
 
         @Override
         protected void handleDataMarker(String name, BlockPos pos, ServerLevelAccessor level, RandomSource random, BoundingBox box) {
+            if ("tango_egg".equals(name)) {
+                int eggCount = 2 + random.nextInt(2); // genera 2 o 3 (inclusive)
+
+                BlockState state = ModBlocks.TANGOFTERO_EGG.get()
+                        .defaultBlockState()
+                        .setValue(BlockStateProperties.EGGS, eggCount);
+
+                level.setBlock(pos, state, 2);
+                System.out.println("[STRUCTURE] Tangoftero Egg (" + eggCount + ") generado en " + pos);
+            }
             if ("tango_spawn".equals(name)) {
                 TangofteroEntity tangoftero = new TangofteroEntity(ModEntities.TANGOFTERO.get(), level.getLevel());
 
