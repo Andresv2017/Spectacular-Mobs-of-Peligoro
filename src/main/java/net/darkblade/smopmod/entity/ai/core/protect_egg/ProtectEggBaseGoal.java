@@ -26,6 +26,8 @@ public abstract class ProtectEggBaseGoal extends Goal {
     protected final EggBreakReaction eggBreakReaction;
 
     protected BlockPos targetEggPos;
+    private int threatScanCooldown = 0;
+    private int attackCooldown = 0;
 
     public enum EggBreakReaction {
         FLEE,
@@ -89,6 +91,8 @@ public abstract class ProtectEggBaseGoal extends Goal {
     public void tick() {
         if (targetEggPos == null) return;
 
+        if (attackCooldown > 0) attackCooldown--;
+
         // If currently targeting an enemy, pursue it if still in range
         if (mob.getTarget() != null) {
             double distToTarget = mob.distanceToSqr(mob.getTarget());
@@ -107,12 +111,15 @@ public abstract class ProtectEggBaseGoal extends Goal {
             mob.getNavigation().moveTo(center.x, center.y, center.z, 1.1f);
         } else {
             onEggReached();
-            checkForThreats();
+            if (--threatScanCooldown <= 0) {
+                checkForThreats();
+                threatScanCooldown = 20;
+            }
         }
     }
 
     protected void checkForThreats() {
-        if (!attackOnApproach || targetEggPos == null) return;
+        if (!attackOnApproach || targetEggPos == null || attackCooldown > 0) return;
 
         List<LivingEntity> threats = mob.level().getEntitiesOfClass(
                 LivingEntity.class,
@@ -122,6 +129,7 @@ public abstract class ProtectEggBaseGoal extends Goal {
 
         if (!threats.isEmpty()) {
             mob.setTarget(threats.get(0));
+            attackCooldown = 40; // 2 seconds of cooldown between attacks
         }
     }
 
@@ -140,7 +148,7 @@ public abstract class ProtectEggBaseGoal extends Goal {
             }
         }
 
-        if (attackOnBreak) {
+        if (attackOnBreak && attackCooldown <= 0) {
             List<LivingEntity> threats = mob.level().getEntitiesOfClass(
                     LivingEntity.class,
                     new AABB(brokenPos).inflate(defenseRadius),
@@ -149,6 +157,7 @@ public abstract class ProtectEggBaseGoal extends Goal {
 
             if (!threats.isEmpty()) {
                 mob.setTarget(threats.get(0));
+                attackCooldown = 40;
             }
         }
     }
