@@ -144,7 +144,6 @@ public abstract class ProtectEggBaseGoal extends Goal {
                 }
             }
             case IGNORE -> {
-                // Do nothing
             }
         }
 
