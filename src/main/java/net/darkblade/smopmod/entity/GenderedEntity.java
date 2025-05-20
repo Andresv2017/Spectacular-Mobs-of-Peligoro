@@ -1,11 +1,13 @@
 package net.darkblade.smopmod.entity;
 
+import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.darkblade.smopmod.entity.interfaces.gender.Gendered;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
 
 public abstract class GenderedEntity extends BaseEntity implements Gendered {
@@ -48,6 +50,12 @@ public abstract class GenderedEntity extends BaseEntity implements Gendered {
     @Override
     public AgeableMob getBreedOffspring(net.minecraft.server.level.ServerLevel level, AgeableMob partner) {
         return null;
+    }
+
+    @Override
+    public boolean canMate(Animal other) {
+        if (!(other instanceof GenderedEntity gendered)) return false;
+        return this.isMale() != ((GenderedEntity) other).isMale(); // solo macho + hembra
     }
 
 }

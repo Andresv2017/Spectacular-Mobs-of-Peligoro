@@ -151,7 +151,7 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
 
     public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
         EntityType<?> entitytype = p_289448_.getType();
-        return entitytype == EntityType.BEE || entitytype == EntityType.FOX;
+        return entitytype == EntityType.SNIFFER || entitytype == EntityType.FOX;
     };
 
     @Override
