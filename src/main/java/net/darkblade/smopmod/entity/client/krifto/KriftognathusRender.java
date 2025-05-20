@@ -7,10 +7,7 @@ import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
-
-import static net.darkblade.smopmod.entity.custom.KriftognathusEntity.SPAWN_BIOME;
 
 public class KriftognathusRender extends MobRenderer<KriftognathusEntity, KriftognathusModel<KriftognathusEntity>> {
 

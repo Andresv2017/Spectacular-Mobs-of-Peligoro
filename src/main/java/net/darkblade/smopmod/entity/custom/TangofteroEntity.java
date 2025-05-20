@@ -6,6 +6,9 @@ import net.darkblade.smopmod.entity.TangofteroVariant;
 import net.darkblade.smopmod.entity.ai.core.FollowOwnerBaseGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericLayEggGoal;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectNearestEggGoal;
 import net.darkblade.smopmod.entity.ai.tangoftero.*;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepThreatEvaluator;
@@ -55,7 +58,9 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(TangofteroEntity.class, EntityDataSerializers.BOOLEAN);
 
     public static final Predicate<LivingEntity> ENEMY_SELECTOR = (entity) -> entity.getMobType() == MobType.UNDEAD;
-
+    public static final Predicate<LivingEntity> ENEMY_SELECTOR2 = (entity) ->
+            entity instanceof Player
+                    || entity.getMobType() == MobType.UNDEAD;
 
     public TangofteroEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
@@ -171,10 +176,18 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new TangofteroAttackGoal(this,1.0D,true));
         this.goalSelector.addGoal(2, new GenericBreedGoal<>(this, 1.0));
-        this.goalSelector.addGoal(3, new GenericLayEggGoal<>(this, ModBlocks.TANGOFTERO_EGG.get()));
+        EggGoalRegistry.registerWithNearestGoal(
+                this,
+                ModBlocks.TANGOFTERO_EGG,
+                32, 3, 5,// searchRadius, stayNear, defense
+                false, true,
+                ProtectEggBaseGoal.EggBreakReaction.FLEE,
+                ENEMY_SELECTOR2,
+                4
+        );
         this.goalSelector.addGoal(5, new TangofteroTemptGoal(this, 1.2D, Ingredient.of(Items.ROTTEN_FLESH), false));
         this.goalSelector.addGoal(6, new FollowParentGoal(this, 1.1D));
-        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(5, new CustomWanderGoal(this, 1.0));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 3f));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
         this.goalSelector.addGoal(10, new FollowOwnerBaseGoal(this, 1.0D, 10.0F, 2.0F, false, false));
@@ -234,7 +247,7 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
         }
 
 
-        if (item == BREEDING_ITEM && this.isTame() && !this.isBaby() && !this.isInLove()) {
+        if (item == BREEDING_ITEM && !this.isBaby() && !this.isInLove()) {
             if (!player.level().isClientSide) {
                 this.setInLove(player);
                 if (!player.getAbilities().instabuild) {

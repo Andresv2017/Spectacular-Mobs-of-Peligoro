@@ -3,8 +3,6 @@ package net.darkblade.smopmod.entity.client.niras;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.darkblade.smopmod.SMOP;
 import net.darkblade.smopmod.entity.client.ModModelLayers;
-import net.darkblade.smopmod.entity.client.krifto.KriftognathusModel;
-import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
 import net.darkblade.smopmod.entity.custom.NirasmosaurusEntity;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;

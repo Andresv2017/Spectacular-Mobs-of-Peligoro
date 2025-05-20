@@ -4,9 +4,6 @@ import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.SimpleMenuProvider;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.inventory.HorseInventoryMenu;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -58,7 +55,7 @@ public class RiderActionPacket {
     public enum ActionType {
         ATTACK,
         FEAR,
-        OPEN_INVENTORY // 👈 nuevo
+        OPEN_INVENTORY
     }
 
     public static class ModMessages {

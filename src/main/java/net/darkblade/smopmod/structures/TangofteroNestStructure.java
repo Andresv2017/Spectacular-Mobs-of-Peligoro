@@ -2,11 +2,14 @@ package net.darkblade.smopmod.structures;
 
 import com.mojang.serialization.Codec;
 import net.darkblade.smopmod.entity.ModEntities;
+import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
@@ -26,7 +29,7 @@ import java.util.Optional;
 
 public class TangofteroNestStructure extends Structure {
     public static final Codec<TangofteroNestStructure> CODEC = simpleCodec(TangofteroNestStructure::new);
-    private static final ResourceLocation TEMPLATE = new ResourceLocation("smop", "tangoftero_nests");
+    private static final ResourceLocation TEMPLATE = new ResourceLocation("smop", "tangoftero_nest");
 
     public TangofteroNestStructure(StructureSettings settings) {
         super(settings);
@@ -135,11 +138,21 @@ public class TangofteroNestStructure extends Structure {
                     .addProcessor(BlockIgnoreProcessor.STRUCTURE_BLOCK);
         }
 
+        @Override
+        protected void handleDataMarker(String name, BlockPos pos, ServerLevelAccessor level, RandomSource random, BoundingBox box) {
+            if ("tango_spawn".equals(name)) {
+                TangofteroEntity tangoftero = new TangofteroEntity(ModEntities.TANGOFTERO.get(), level.getLevel());
 
+                if (tangoftero != null) {
+                    tangoftero.setPersistenceRequired(); // evita que desaparezca con distancia
+                    tangoftero.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, random.nextFloat() * 360F, 0.0F);
+                    tangoftero.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.STRUCTURE, null, null);
+                    level.addFreshEntityWithPassengers(tangoftero);
 
-        protected void handleDataMarker(String function, BlockPos pos, ServerLevelAccessor world, RandomSource random, BoundingBox sbb) {
+                    System.out.println("[SPAWN] Tangoftero generado en " + pos);
+                }
+            }
         }
-
 
     }
 }

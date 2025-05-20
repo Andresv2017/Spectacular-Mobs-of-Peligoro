@@ -1,6 +1,5 @@
 package net.darkblade.smopmod.block;
 
-import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.darkblade.smopmod.entity.interfaces.egg_custom.CustomEggBorn;
 import net.darkblade.smopmod.entity.interfaces.variants.RandomVariantCapable;
 import net.minecraft.core.BlockPos;
@@ -53,7 +52,6 @@ public class SmallEggBlock extends Block {
         this.registerDefaultState(this.stateDefinition.any().setValue(HATCH, 0).setValue(EGGS, 1));
     }
 
-    // --- Comportamiento de destrucción por pisadas o caídas ---
     @Override
     public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
         if (!entity.isSteppingCarefully()) {
@@ -95,7 +93,6 @@ public class SmallEggBlock extends Block {
         }
     }
 
-    // --- Incubación y eclosión ---
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
         if (!level.isClientSide) {
@@ -120,12 +117,12 @@ public class SmallEggBlock extends Block {
                     baby.setAge(-24000);
                     baby.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0F, 0.0F);
 
-                    // ⬇️ Aquí es donde lo pones
+                    // Random Variant
                     if (baby instanceof RandomVariantCapable vc) {
                         vc.setRandomVariant(level.getRandom());
                     }
 
-                    // Lógica personalizada de nacimiento
+                    // EggBorn Custom Advanced Logic
                     if (baby instanceof CustomEggBorn born) {
                         born.onEggBorn(level, pos);
                     }
@@ -137,7 +134,6 @@ public class SmallEggBlock extends Block {
     }
 
 
-    // --- Estados y forma ---
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(HATCH, EGGS);

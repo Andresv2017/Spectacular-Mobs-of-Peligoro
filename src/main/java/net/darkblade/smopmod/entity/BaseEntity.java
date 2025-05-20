@@ -1,7 +1,5 @@
 package net.darkblade.smopmod.entity;
 
-
-import net.darkblade.smopmod.entity.interfaces.gender.Gendered;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepingEntity;
 import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.core.BlockPos;
@@ -11,20 +9,16 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
-
 
 public abstract class BaseEntity extends TamableAnimal implements ISleepingEntity {
 
@@ -145,6 +139,12 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
     @Override public void setAwakeing(boolean value) { entityData.set(AWAKENING, value); }
 
 
+    private boolean isFollowingOwner = false;
+
+    public boolean isFollowingOwner() {return isFollowingOwner;}
+
+    public void setFollowingOwner(boolean value) {this.isFollowingOwner = value;}
+
     public boolean isWandering() { return entityData.get(WANDERING); }
     public void setWandering(boolean wandering) { entityData.set(WANDERING, wandering); }
 
@@ -179,8 +179,9 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
         this.entityData.set(HAS_EGG, value);
     }
 
-    public void tryLayEgg(Block eggBlock) {
-        if (!this.hasEgg() || this.isMammal() || !this.onGround()) return;
+    @Nullable
+    public BlockPos tryLayEgg(Block eggBlock) {
+        if (!this.hasEgg() || this.isMammal() || !this.onGround()) return null;
 
         BlockPos pos = this.blockPosition();
         Level level = this.level();
@@ -191,9 +192,11 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             level.setBlock(pos, eggBlock.defaultBlockState(), 3);
             level.playSound(null, pos, SoundEvents.TURTLE_LAY_EGG, SoundSource.BLOCKS, 1.0F, 1.0F);
             this.setHasEgg(false);
+            return pos;
         }
-    }
 
+        return null;
+    }
 
 }
 

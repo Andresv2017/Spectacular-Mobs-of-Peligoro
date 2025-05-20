@@ -74,6 +74,7 @@ public class FollowOwnerBaseGoal extends Goal {
     public void start() {
         this.timeToRecalcPath = 0;
         this.oldWaterCost = this.mob.getPathfindingMalus(BlockPathTypes.WATER);
+        this.mob.setFollowingOwner(true);
     }
 
     @Override
@@ -81,17 +82,33 @@ public class FollowOwnerBaseGoal extends Goal {
         this.owner = null;
         this.navigation.stop();
         this.mob.setPathfindingMalus(BlockPathTypes.WATER, this.oldWaterCost);
+        this.mob.setFollowingOwner(false);
     }
+
 
     @Override
     public void tick() {
         this.mob.getLookControl().setLookAt(this.owner, 10.0F, this.mob.getMaxHeadXRot());
+
         if (--this.timeToRecalcPath <= 0) {
             this.timeToRecalcPath = this.adjustedTickDelay(10);
-            if (this.mob.distanceToSqr(this.owner) >= 144.0D) teleportToOwner();
-            this.navigation.moveTo(this.owner, this.speedModifier);
+
+            double distanceSqr = this.mob.distanceToSqr(this.owner);
+            if (distanceSqr >= 144.0D) {
+                teleportToOwner();
+                return;
+            }
+
+            BlockPos targetPos = this.navigation.getTargetPos();
+            BlockPos ownerPos = this.owner.blockPosition();
+
+            // Solo mover si no hay path o el destino está lejos del owner
+            if (!this.navigation.isInProgress() || targetPos == null || !targetPos.closerThan(ownerPos, 2)) {
+                this.navigation.moveTo(this.owner, this.speedModifier);
+            }
         }
     }
+
 
     private void teleportToOwner() {
         BlockPos blockpos = this.owner.blockPosition();

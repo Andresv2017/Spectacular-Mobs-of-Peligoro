@@ -5,6 +5,9 @@ import net.darkblade.smopmod.entity.BaseEntity;
 import net.darkblade.smopmod.entity.GenderedEntity;
 import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericLayEggGoal;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectOwnEggGoal;
 import net.darkblade.smopmod.entity.ai.krifto.KriftoAttackGoal;
 import net.darkblade.smopmod.entity.interfaces.egg_custom.CustomEggBorn;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
@@ -22,6 +25,8 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -33,13 +38,16 @@ import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class KriftognathusEntity extends GenderedEntity implements ISleepThreatEvaluator, ISleepAwareness, CustomEggBorn {
 
@@ -54,14 +62,11 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
     private int idleAnimationTimeout = 0;
     public int attackAnimationTimeout = 0;
 
-    private boolean hasAssignedBiome = false;
-
     @Override
     public void tick() {
         super.tick();
         setupAnimationStates();
     }
-
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
 
@@ -144,13 +149,26 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
 
     // ───────────────────────────────────────────────────── GOALS ─────
 
+    public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
+        EntityType<?> entitytype = p_289448_.getType();
+        return entitytype == EntityType.BEE || entitytype == EntityType.FOX;
+    };
+
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
 
         this.goalSelector.addGoal(1, new KriftoAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(2, new GenericBreedGoal<>(this, 1.0));
-        this.goalSelector.addGoal(3, new GenericLayEggGoal<>(this, ModBlocks.KRIFFO_EGG.get()));
+        EggGoalRegistry.registerWithOwnGoal(
+                this,
+                ModBlocks.KRIFFO_EGG, // El bloque de huevo
+                4, 6, // stayNearEggRadius, defenseRadius
+                true, true, // attackOnApproach, attackOnBreak
+                ProtectEggBaseGoal.EggBreakReaction.IGNORE, // No huye si lo rompen
+                PREY_SELECTOR,
+                4// Prioridad base del goal
+        );
         this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 1.1D));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 3f));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
@@ -166,6 +184,43 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
                 .add(Attributes.ATTACK_SPEED, 0.4D)
                 .add(Attributes.ATTACK_KNOCKBACK, 0.1F)
                 .add(Attributes.ATTACK_DAMAGE, 2.0F);
+    }
+
+    private static final Item TAMING_ITEM = Items.RABBIT;
+    private static final Item BREEDING_ITEM = Items.CHICKEN;
+
+    @Override
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        Item item = stack.getItem();
+
+        if (item == TAMING_ITEM && !this.isTame()) {
+            if (!player.level().isClientSide) {
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+
+                if (this.random.nextInt(3) == 0) { // 1 en 3 chance
+                    this.tame(player);
+                    this.level().broadcastEntityEvent(this, (byte) 7); // ❤️ corazones
+                } else {
+                    this.level().broadcastEntityEvent(this, (byte) 6); // 💨 humo (fallo)
+                }
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
+
+        if (item == BREEDING_ITEM && !this.isBaby() && !this.isInLove()) {
+            if (!player.level().isClientSide) {
+                this.setInLove(player);
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+        return super.mobInteract(player, hand);
     }
 
     // ───────────────────────────────────────────────────── ATTACK ─────
@@ -186,7 +241,6 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
         this.entityData.define(ATTACKING,false);
         this.entityData.define(SPAWN_BIOME, "default");
     }
-
 
     // ───────────────────────────────────────────────────── Sounds ─────
 
@@ -213,7 +267,7 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
 
     @Override
     protected SleepCycleController<BaseEntity> createSleepController() {
-        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 20, 20);
+        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 50, 70);
     }
 
     public Set<EntityType<?>> getInterruptingEntityTypes() {
@@ -238,7 +292,7 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
         SpawnGroupData result = super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
 
-        // ─── Asignar bioma de nacimiento ───
+        // ─── Assing Born Biome ───
         ResourceLocation biomeKey = pLevel.registryAccess()
                 .registryOrThrow(Registries.BIOME)
                 .getKey(pLevel.getBiome(this.blockPosition()).value());
@@ -247,7 +301,6 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
         this.spawnBiomePath = biomePath;
         this.entityData.set(SPAWN_BIOME, biomePath);
 
-        // ─── Asignar género ───
         boolean isMale = this.getRandom().nextBoolean();
         this.setMale(isMale);
 
@@ -277,11 +330,11 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
 
     @Override
     public void onEggBorn(ServerLevel level, BlockPos pos) {
-        assignBiomeTexture(level); // Tu lógica de textura
-        // Asignar género aleatorio usando método heredado
-        boolean isMale = this.getRandom().nextBoolean();
+        assignBiomeTexture(level); // Texture Logic
+        boolean isMale = this.getRandom().nextBoolean();  // Gender From GenderEntity
         this.setMale(isMale);
     }
+
     public String getSpawnBiomePath() {
         return this.entityData.get(SPAWN_BIOME);
     }
@@ -294,27 +347,23 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
     }
 
     public void assignBiomeTexture(ServerLevel level) {
-        // Obtener el ResourceLocation del bioma en la posición actual
+        // Get the ResourceLocation of the biome at the current position
         ResourceLocation biomeKey = level.registryAccess()
                 .registryOrThrow(Registries.BIOME)
                 .getKey(level.getBiome(this.blockPosition()).value());
 
-        // Extraer solo el "path", por ejemplo: "jungle", "snowy_taiga", etc.
+        // Extract only the "path", for example: "jungle", "snowy_taiga", etc.
         String biomePath = biomeKey != null ? biomeKey.getPath() : "default";
 
-        // Guardar localmente
+        // Store it locally
         this.spawnBiomePath = biomePath;
 
-        // Sincronizar con el cliente si estamos en servidor
+        // Sync with the client if on the server
         if (!level.isClientSide()) {
             this.entityData.set(SPAWN_BIOME, biomePath);
         }
 
-        // (Opcional) Mensaje de debug
+        // (Optional) Debug message
         System.out.println("[BiomeTexture] Asignado: " + biomePath + " para entidad ID: " + this.getId());
     }
-
-
-
-
 }

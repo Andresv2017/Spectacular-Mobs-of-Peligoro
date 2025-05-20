@@ -99,5 +99,4 @@ public class TangofteroAttackGoal extends MeleeAttackGoal {
         }
         return super.canUse();
     }
-
 }

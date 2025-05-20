@@ -1,7 +1,6 @@
 package net.darkblade.smopmod.entity.ai.krifto;
 
 import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
-import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;

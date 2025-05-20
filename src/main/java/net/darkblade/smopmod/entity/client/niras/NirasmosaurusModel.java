@@ -3,7 +3,6 @@ package net.darkblade.smopmod.entity.client.niras;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.darkblade.smopmod.entity.client.niras.animations.NirasmosaurusLandAnimations;
-import net.darkblade.smopmod.entity.client.niras.animations.NirasmosaurusWaterAnimations;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
