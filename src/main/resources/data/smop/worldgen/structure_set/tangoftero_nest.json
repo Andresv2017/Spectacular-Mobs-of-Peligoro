@@ -8,9 +8,9 @@
   "placement": {
     "type": "smop:tangoftero_random_spread",
     "salt": 1278435789,
-    "spacing": 160,
-    "separation": 80,
-    "spread_type": "triangular"
+    "spacing": 16,
+    "separation": 8,
+    "spread_type": "linear"
   }
 }
 

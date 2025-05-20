@@ -148,8 +148,6 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
     public boolean isWandering() { return entityData.get(WANDERING); }
     public void setWandering(boolean wandering) { entityData.set(WANDERING, wandering); }
 
-
-
     @Override
     public void aiStep() {
         if (isSleeping() || isPreparingSleep() || isAwakeing()) {

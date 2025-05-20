@@ -5,7 +5,7 @@
   ],
   "spawners": {
     "type": "smop:tangoftero",
-    "weight": 25,
+    "weight": 10,
     "maxCount": 4,
     "minCount": 2
   }
