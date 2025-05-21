@@ -85,14 +85,10 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
-
         if (!this.level().isClientSide()) return;
-
-        // Anti-colisión: espera unos ticks antes de iniciar otra animación
         if (this.tickCount - lastAnimationChangeTick < MIN_TICKS_BETWEEN_ANIMS) {
             return;
         }
-
         if (key == PREPARING_SLEEP) {
             if (this.isPreparingSleep()) {
                 System.out.println("[CLIENT][Sync] → start preparing_sleep");
@@ -104,7 +100,6 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
                 preparingSleepState.stop();
             }
         }
-
         if (key == SLEEPING) {
             if (this.isSleeping()) {
                 System.out.println("[CLIENT][Sync] → start sleep");
@@ -116,7 +111,6 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
                 sleepState.stop();
             }
         }
-
         if (key == AWAKENING) {
             if (this.isAwakeing()) {
                 System.out.println("[CLIENT][Sync] → start awakeing");
@@ -137,14 +131,12 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
         } else {
             --this.idleAnimationTimeout;
         }
-
         if (this.isAttacking() && attackAnimationTimeout <= 0) {
             attackAnimationTimeout = 15; // Length in ticks of your animation
             attackAnimationState.start(this.tickCount);
         } else {
             --this.attackAnimationTimeout;
         }
-
         if (!this.isAttacking()) {
             attackAnimationState.stop();
         }

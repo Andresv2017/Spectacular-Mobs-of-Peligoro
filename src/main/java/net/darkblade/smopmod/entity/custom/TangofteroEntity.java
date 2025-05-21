@@ -71,19 +71,13 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     @Override
     public void tick() {
         super.tick();
-
         if (sleepController == null) {
             sleepController = createSleepController();
         }
-
-        // Se ejecuta en ambos lados
-        updateFeedingBehavior(); // rugido, mordida, cooldowns, etc.
-
-        // En el cliente ya se ejecuta updateBaseAnimations() desde BaseEntity
+        updateFeedingBehavior();
         if (this.level().isClientSide()) {
-            this.updateAnimations(); // activa animaciones extra como ataque
+            this.updateAnimations();
         }
-
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -99,14 +93,11 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
-
         if (!this.level().isClientSide()) return;
-
         // Anti-colisión: espera unos ticks antes de iniciar otra animación
         if (this.tickCount - lastAnimationChangeTick < MIN_TICKS_BETWEEN_ANIMS) {
             return;
         }
-
         if (key == PREPARING_SLEEP) {
             if (this.isPreparingSleep()) {
                 System.out.println("[CLIENT][Sync] → start preparing_sleep");
@@ -118,7 +109,6 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
                 preparingSleepState.stop();
             }
         }
-
         if (key == SLEEPING) {
             if (this.isSleeping()) {
                 System.out.println("[CLIENT][Sync] → start sleep");
@@ -130,7 +120,6 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
                 sleepState.stop();
             }
         }
-
         if (key == AWAKENING) {
             if (this.isAwakeing()) {
                 System.out.println("[CLIENT][Sync] → start awakeing");
@@ -147,16 +136,13 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
 
     @Override
     public void updateAnimations() {
-        super.updateAnimations(); // activa idle, walk, sprint, death
-
-        // Activar animación de ataque
+        super.updateAnimations();
         if (this.isAttacking() && attackAnimationTimeout <= 0) {
             attackAnimationTimeout = 16;
             attackAnimationState.start(this.tickCount);
         } else {
             --attackAnimationTimeout;
         }
-
         if (!this.isAttacking()) {
             attackAnimationState.stop();
         }
@@ -165,9 +151,9 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     @Override
     public void handleEntityEvent(byte id) {
         if (id == 42) {
-            this.biteAnimationState.start(this.tickCount); // bite animatiom
+            this.biteAnimationState.start(this.tickCount);
         } else if (id == 43) {
-            this.roarAnimationState.start(this.tickCount); // roar animatiom
+            this.roarAnimationState.start(this.tickCount);
         } else {
             super.handleEntityEvent(id);
         }
@@ -215,13 +201,9 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
 
     // ───────────────────────────────────────────────────── ATTACK ─────
 
-    public void setAttacking(boolean attacking) {
-        this.entityData.set(ATTACKING, attacking);
-    }
+    public void setAttacking(boolean attacking) {this.entityData.set(ATTACKING, attacking);}
 
-    public boolean isAttacking() {
-        return this.entityData.get(ATTACKING);
-    }
+    public boolean isAttacking() {return this.entityData.get(ATTACKING);}
 
     // ───────────────────────────────────────────────────── MOB INTERACT ─────
 
@@ -233,7 +215,6 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         Item item = stack.getItem();
-
         if (item == TAMING_ITEM && !this.isTame()) {
             if (!player.level().isClientSide) {
                 if (!player.getAbilities().instabuild) {
@@ -249,8 +230,6 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
-
-
         if (item == BREEDING_ITEM && !this.isBaby() && !this.isInLove()) {
             if (!player.level().isClientSide) {
                 this.setInLove(player);
@@ -260,7 +239,6 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
-
         if (item.isEdible() && this.biteAnimationCooldown <= 0) {
             if (item.isEdible() && this.biteAnimationCooldown <= 0) {
                 handleFeeding(item, player);
@@ -296,21 +274,15 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
 
     @Nullable
     @Override
-    protected SoundEvent getAmbientSound() {
-        return SoundEvents.CHICKEN_AMBIENT;
-    }
+    protected SoundEvent getAmbientSound() {return SoundEvents.CHICKEN_AMBIENT;}
 
     @Nullable
     @Override
-    protected SoundEvent getHurtSound(DamageSource pDamageSource) {
-        return SoundEvents.CHICKEN_HURT;
-    }
+    protected SoundEvent getHurtSound(DamageSource pDamageSource) {return SoundEvents.CHICKEN_HURT;}
 
     @Nullable
     @Override
-    protected SoundEvent getDeathSound() {
-        return SoundEvents.CHICKEN_DEATH;
-    }
+    protected SoundEvent getDeathSound() {return SoundEvents.CHICKEN_DEATH;}
 
     // ───────────────────────────────────────────────────── Variant ─────
 
@@ -321,26 +293,16 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     }
 
     @Override
-    public int getVariantId() {
-        return this.entityData.get(VARIANT);
-    }
+    public int getVariantId() {return this.entityData.get(VARIANT);}
 
-    public void setVariantId(int id) {
-        this.entityData.set(VARIANT, id);
-    }
+    public void setVariantId(int id) {this.entityData.set(VARIANT, id);}
 
-    public TangofteroVariant getVariant() {
-        return TangofteroVariant.byId(getVariantId());
-    }
+    public TangofteroVariant getVariant() {return TangofteroVariant.byId(getVariantId());}
 
-    public void setVariant(TangofteroVariant variant) {
-        setVariantId(variant.getId());
-    }
+    public void setVariant(TangofteroVariant variant) {setVariantId(variant.getId());}
 
     @Override
-    public int getMaxVariants() {
-        return TangofteroVariant.values().length;
-    }
+    public int getMaxVariants() {return TangofteroVariant.values().length;}
 
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
@@ -357,31 +319,24 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     // ───────────────────────────────────────────────────── Eggs ─────
 
     @Override
-    public TangofteroEntity getBreedOffspring(ServerLevel level, AgeableMob partner) {
-        return null;
-    }
+    public TangofteroEntity getBreedOffspring(ServerLevel level, AgeableMob partner) {return null;}
 
     @Override
     public boolean isFood(ItemStack stack) {return stack.getItem() == BREEDING_ITEM;}
 
     // ───────────────────────────────────────────────────── SLEEP SYSTEM ─────
 
-
     @Override
     protected SleepCycleController<BaseEntity> createSleepController() {
-        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState,
+        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeningState,
                 getPreparingSleepDuration(), getAwakeningDuration());
     }
 
     @Override
-    protected int getPreparingSleepDuration() {
-        return 20;
-    }
+    protected int getPreparingSleepDuration() {return 20;}
 
     @Override
-    protected int getAwakeningDuration() {
-        return 20;
-    }
+    protected int getAwakeningDuration() {return 20;}
 
     @Override
     public Set<EntityType<?>> getInterruptingEntityTypes() {
@@ -398,7 +353,7 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
         return false;
     }
 
-    // ───────────────────────────────────────────────────── ROAR ─────
+    // ───────────────────────────────────────────────────── ROAR - SCARE UNDEAD ─────
 
     private static final int ROAR_COOLDOWN_TICKS = 600;
     private int biteAnimationCooldown = 0;
@@ -417,15 +372,12 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
             float healAmount = isRottenFlesh ? 6.0F : 3.0F;
             this.heal(healAmount);
         }
-
         if (!player.getAbilities().instabuild) {
             player.getMainHandItem().shrink(1);
         }
-
         this.biteAnimationCooldown = 20;
         this.level().broadcastEntityEvent(this, (byte) 42);
         this.level().broadcastEntityEvent(this, (byte) 7);
-
         if (isRottenFlesh && this.isTame() && this.tickCount - this.lastRoarTime >= ROAR_COOLDOWN_TICKS) {
             this.roarDelayTicks = 15;
             this.shouldRoar = true;
@@ -434,27 +386,21 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     }
 
     private void updateFeedingBehavior() {
-
         if (this.biteAnimationCooldown > 0) {
             this.biteAnimationCooldown--;
         }
-
         this.biteAnimationState.animateWhen(this.biteAnimationState.isStarted(), this.tickCount);
         this.roarAnimationState.animateWhen(this.roarAnimationState.isStarted(), this.tickCount);
-
         if (this.shouldRoar && this.roarDelayTicks-- <= 0) {
             this.shouldRoar = false;
             this.roarDelayTicks = -1;
-
             if (!this.level().isClientSide) {
                 this.level().broadcastEntityEvent(this, (byte) 43);
                 this.scareUndeadDelayTicks = 40;
             }
         }
-
         if (this.scareUndeadDelayTicks >= 0) {
             this.scareUndeadDelayTicks--;
-
             if (this.scareUndeadDelayTicks == 0 && !this.level().isClientSide) {
                 this.scareUndeadMobs();
             }
@@ -465,18 +411,14 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
         List<Mob> nearbyUndead = this.level().getEntitiesOfClass(Mob.class,
                 this.getBoundingBox().inflate(10),
                 mob -> mob.getMobType() == MobType.UNDEAD && mob.isAlive());
-
         for (Mob mob : nearbyUndead) {
             double dx = mob.getX() - this.getX();
             double dz = mob.getZ() - this.getZ();
             double distance = Math.sqrt(dx * dx + dz * dz);
-
             if (distance == 0) continue;
-
             double multiplier = 7.0 / distance;
             double targetX = mob.getX() + dx * multiplier;
             double targetZ = mob.getZ() + dz * multiplier;
-
             mob.getNavigation().moveTo(targetX, mob.getY(), targetZ, 1.2);
         }
     }

@@ -31,43 +31,11 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
 
     public final AnimationState preparingSleepState = new AnimationState();
     public final AnimationState sleepState = new AnimationState();
-    protected final AnimationState awakeingState = new AnimationState();
+    protected final AnimationState awakeningState = new AnimationState();
 
 
     protected BaseEntity(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
-    }
-
-    @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(SLEEPING, false);
-        this.entityData.define(PREPARING_SLEEP, false);
-        this.entityData.define(AWAKENING, false);
-        this.entityData.define(WANDERING, false);
-        this.entityData.define(HAS_EGG, false);
-    }
-
-    @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.putBoolean("Sleeping", isSleeping());
-        tag.putBoolean("PreparingSleep", isPreparingSleep());
-        tag.putBoolean("Awakening", isAwakeing());
-        tag.putBoolean("Wandering", isWandering());
-        tag.putBoolean("IsMammal", this.isMammal);
-        tag.putBoolean("HasEgg", this.hasEgg());
-    }
-
-    @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        setSleeping(tag.getBoolean("Sleeping"));
-        setPreparingSleep(tag.getBoolean("PreparingSleep"));
-        setAwakeing(tag.getBoolean("Awakening"));
-        setWandering(tag.getBoolean("Wandering"));
-        this.isMammal = tag.getBoolean("IsMammal");
-        this.setHasEgg(tag.getBoolean("HasEgg"));
     }
 
     @Override
@@ -77,69 +45,33 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
         if (sleepController == null) {
             sleepController = createSleepController();
         }
-
-        // 💤 Sistema de sueño modular, solo en servidor
         if (!this.level().isClientSide()) {
-            sleepController.tick(this.tickCount); // si usas sleepController
-            this.updateSprintStatus(); // separamos esta lógica
+            sleepController.tick(this.tickCount);
+            this.updateSprintStatus();
         }
-
-        // 🎞️ Animaciones visuales
         if (this.level().isClientSide()) {
             this.updateBaseAnimations();
         }
-
-        // 🪑 Sentado (órdenes del jugador)
         if (isOrderedToSit()) {
             getNavigation().stop();
             setDeltaMovement(Vec3.ZERO);
         }
-
     }
 
-    @Override
-    public void travel(Vec3 travelVector) {
-        if (isSleeping() || isPreparingSleep() || isAwakeing()) {
-            setDeltaMovement(Vec3.ZERO);
-            getNavigation().stop();
-            return;
-        }
-        super.travel(travelVector);
-    }
+    // ───────────────────────────────────────────────────── STAY/FOLLOW/WANDERING ─────
 
-
-    protected SleepCycleController<BaseEntity> sleepController;
-
-    protected int getPreparingSleepDuration() {
-        return 0;
-    }
-
-    protected int getAwakeningDuration() {
-        return 0;
-    }
-
-    protected SleepCycleController<BaseEntity> createSleepController() {
-        return new SleepCycleController<>(
-                this, preparingSleepState, sleepState, awakeingState,
-                getPreparingSleepDuration(), getAwakeningDuration()
-        );
-    }
-
-    @Override
-    public boolean hurt(DamageSource source, float amount) {
-        boolean result = super.hurt(source, amount);
-        if (!level().isClientSide()) {
-            sleepController.interruptSleep("damage", tickCount);
-        }
-        return result;
-    }
+    private boolean isFollowingOwner = false;
+    public boolean isFollowingOwner() {return isFollowingOwner;}
+    public void setFollowingOwner(boolean value) {this.isFollowingOwner = value;}
+    public boolean isWandering() { return entityData.get(WANDERING); }
+    public void setWandering(boolean wandering) { entityData.set(WANDERING, wandering); }
 
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         if (this.isOwnedBy(player) && player.isShiftKeyDown()) {
             if (!isOrderedToSit() && !isWandering()) {
                 this.setWandering(true);
-                this.setOrderedToSit(false); // asegura que no quede en stay
+                this.setOrderedToSit(false);
                 this.messageState("wandering", player);
             } else {
                 this.setWandering(false);
@@ -159,7 +91,8 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
         player.displayClientMessage(this.getName().copy().append(" is now ").append(state), true);
     }
 
-    // ISleepingEntity
+    // ───────────────────────────────────────────────────── SLEEPING ─────
+
     @Override public boolean isSleeping() { return entityData.get(SLEEPING); }
     @Override public void setSleeping(boolean value) { entityData.set(SLEEPING, value); }
     @Override public boolean isPreparingSleep() { return entityData.get(PREPARING_SLEEP); }
@@ -167,15 +100,18 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
     @Override public boolean isAwakeing() { return entityData.get(AWAKENING); }
     @Override public void setAwakeing(boolean value) { entityData.set(AWAKENING, value); }
 
+    protected SleepCycleController<BaseEntity> sleepController;
 
-    private boolean isFollowingOwner = false;
+    protected int getPreparingSleepDuration() {return 0;}
 
-    public boolean isFollowingOwner() {return isFollowingOwner;}
+    protected int getAwakeningDuration() {return 0;}
 
-    public void setFollowingOwner(boolean value) {this.isFollowingOwner = value;}
-
-    public boolean isWandering() { return entityData.get(WANDERING); }
-    public void setWandering(boolean wandering) { entityData.set(WANDERING, wandering); }
+    protected SleepCycleController<BaseEntity> createSleepController() {
+        return new SleepCycleController<>(
+                this, preparingSleepState, sleepState, awakeningState,
+                getPreparingSleepDuration(), getAwakeningDuration()
+        );
+    }
 
     @Override
     public void aiStep() {
@@ -185,7 +121,26 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
         super.aiStep();
     }
 
-    // --- CAMPOS DE REPRODUCCIÓN ---
+    @Override
+    public void travel(Vec3 travelVector) {
+        if (isSleeping() || isPreparingSleep() || isAwakeing()) {
+            setDeltaMovement(Vec3.ZERO);
+            getNavigation().stop();
+            return;
+        }
+        super.travel(travelVector);
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        boolean result = super.hurt(source, amount);
+        if (!level().isClientSide()) {
+            sleepController.interruptSleep("damage", tickCount);
+        }
+        return result;
+    }
+
+    // ───────────────────────────────────────────────────── REPRODUCTION ─────
 
     protected boolean isMammal = false;
     protected boolean hasEgg = false;
@@ -225,21 +180,19 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
         return null;
     }
 
-    //ANIMACIONES
+    // ───────────────────────────────────────────────────── ANIMATIONS ─────
 
-    // Estados de animación comunes
     protected final AnimationState idleAnimationState = new AnimationState();
     protected final AnimationState walkAnimationState = new AnimationState();
     protected final AnimationState sprintAnimationState = new AnimationState();
     protected final AnimationState deathAnimationState = new AnimationState();
 
-    // Getters reutilizables
     public AnimationState getIdleAnimationState() { return idleAnimationState; }
     public AnimationState getWalkAnimationState() { return walkAnimationState; }
     public AnimationState getSprintAnimationState() { return sprintAnimationState; }
     public AnimationState getDeathAnimationState() { return deathAnimationState; }
 
-    // Método sobrescribible en entidades finales
+
     public void updateAnimations() {
         updateBaseAnimations();
     }
@@ -295,6 +248,40 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             walkAnimationState.stop();
             sprintAnimationState.stop();
         }
+    }
+
+    // ───────────────────────────────────────────────────── NBT ─────
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(SLEEPING, false);
+        this.entityData.define(PREPARING_SLEEP, false);
+        this.entityData.define(AWAKENING, false);
+        this.entityData.define(WANDERING, false);
+        this.entityData.define(HAS_EGG, false);
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putBoolean("Sleeping", isSleeping());
+        tag.putBoolean("PreparingSleep", isPreparingSleep());
+        tag.putBoolean("Awakening", isAwakeing());
+        tag.putBoolean("Wandering", isWandering());
+        tag.putBoolean("IsMammal", this.isMammal);
+        tag.putBoolean("HasEgg", this.hasEgg());
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        setSleeping(tag.getBoolean("Sleeping"));
+        setPreparingSleep(tag.getBoolean("PreparingSleep"));
+        setAwakeing(tag.getBoolean("Awakening"));
+        setWandering(tag.getBoolean("Wandering"));
+        this.isMammal = tag.getBoolean("IsMammal");
+        this.setHasEgg(tag.getBoolean("HasEgg"));
     }
 }
 
