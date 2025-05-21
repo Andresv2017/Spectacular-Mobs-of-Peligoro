@@ -11,6 +11,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -28,8 +29,8 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
     protected static final EntityDataAccessor<Boolean> WANDERING = SynchedEntityData.defineId(BaseEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> HAS_EGG = SynchedEntityData.defineId(BaseEntity.class, EntityDataSerializers.BOOLEAN);
 
-    protected final AnimationState preparingSleepState = new AnimationState();
-    protected final AnimationState sleepState = new AnimationState();
+    public final AnimationState preparingSleepState = new AnimationState();
+    public final AnimationState sleepState = new AnimationState();
     protected final AnimationState awakeingState = new AnimationState();
 
     protected final SleepCycleController<BaseEntity> sleepController =
@@ -74,15 +75,25 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide()) {
-            sleepController.tick(this.tickCount);
+
+        // 💤 Sistema de sueño modular, solo en servidor
+        if (!this.level().isClientSide()) {
+            sleepController.tick(this.tickCount); // si usas sleepController
+            this.updateSprintStatus(); // separamos esta lógica
         }
 
+        // 🎞️ Animaciones visuales
+        if (this.level().isClientSide()) {
+            this.updateBaseAnimations();
+        }
+
+        // 🪑 Sentado (órdenes del jugador)
         if (isOrderedToSit()) {
             getNavigation().stop();
             setDeltaMovement(Vec3.ZERO);
         }
     }
+
 
     @Override
     public void travel(Vec3 travelVector) {
@@ -196,5 +207,84 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
         return null;
     }
 
+    //ANIMACIONES
+
+    // Estados de animación comunes
+    protected final AnimationState idleAnimationState = new AnimationState();
+    protected final AnimationState walkAnimationState = new AnimationState();
+    protected final AnimationState sprintAnimationState = new AnimationState();
+    protected final AnimationState deathAnimationState = new AnimationState();
+
+    // Getters reutilizables
+    public AnimationState getIdleAnimationState() { return idleAnimationState; }
+    public AnimationState getWalkAnimationState() { return walkAnimationState; }
+    public AnimationState getSprintAnimationState() { return sprintAnimationState; }
+    public AnimationState getDeathAnimationState() { return deathAnimationState; }
+
+    // Método sobrescribible en entidades finales
+    public void updateAnimations() {
+        updateBaseAnimations();
+    }
+
+    protected void updateSprintStatus() {
+        boolean isChasing = this.getTarget() != null && this.getTarget().isAlive();
+        this.setSprinting(isChasing);
+
+        double baseSpeed = this.getAttributeValue(Attributes.MOVEMENT_SPEED);
+        double sprintSpeed = this.getAttributeValue(Attributes.ATTACK_SPEED);
+
+        this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(this.isSprinting() ? sprintSpeed : baseSpeed);
+    }
+
+    protected void updateBaseAnimations() {
+        if (this.isDeadOrDying()) {
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
+            if (!deathAnimationState.isStarted()) {
+                deathAnimationState.start(this.tickCount);
+            }
+            System.out.println("[Animation] → death");
+            return;
+        }
+
+        System.out.println("-------- [ANIMATION DEBUG] --------");
+        System.out.println("[Tick] " + this.tickCount);
+        System.out.println("[Target] " + (this.getTarget() != null ? this.getTarget().getName().getString() : "None"));
+        System.out.println("[isSprinting()] = " + this.isSprinting());
+        System.out.println("[BaseSpeed] = " + this.getAttributeValue(Attributes.MOVEMENT_SPEED));
+        System.out.println("[SprintSpeed] = " + this.getAttributeValue(Attributes.ATTACK_SPEED));
+        System.out.println("[Current MOVEMENT_SPEED attribute] = " + this.getAttribute(Attributes.MOVEMENT_SPEED).getBaseValue());
+
+        double speed = this.getDeltaMovement().horizontalDistanceSqr();
+        System.out.println("[Speed²] = " + speed);
+
+        if (speed > 1.0E-6) {
+            if (this.isSprinting()) {
+                if (!sprintAnimationState.isStarted()) {
+                    sprintAnimationState.start(this.tickCount);
+                }
+                walkAnimationState.stop();
+                idleAnimationState.stop();
+                System.out.println("[Animation] → sprint");
+            } else {
+                if (!walkAnimationState.isStarted()) {
+                    walkAnimationState.start(this.tickCount);
+                }
+                sprintAnimationState.stop();
+                idleAnimationState.stop();
+                System.out.println("[Animation] → walk");
+            }
+        } else {
+            if (!idleAnimationState.isStarted()) {
+                idleAnimationState.start(this.tickCount);
+            }
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            System.out.println("[Animation] → idle");
+        }
+    }
 }
+
+
 

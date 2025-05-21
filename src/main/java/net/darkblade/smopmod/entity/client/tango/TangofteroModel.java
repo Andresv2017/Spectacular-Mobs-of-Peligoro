@@ -2,6 +2,7 @@ package net.darkblade.smopmod.entity.client.tango;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.darkblade.smopmod.entity.BaseEntity;
 import net.darkblade.smopmod.entity.animations.ModAnimationDefinitions;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.minecraft.client.model.HierarchicalModel;
@@ -12,7 +13,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 
 
-public class TangofteroModel<T extends Entity> extends HierarchicalModel<T> {
+public class TangofteroModel<T extends TangofteroEntity> extends HierarchicalModel<T> {
     private final ModelPart Rat;
     private final ModelPart body_parts;
     private final ModelPart neck;
@@ -120,26 +121,23 @@ public class TangofteroModel<T extends Entity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(TangofteroEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         this.root().getAllParts().forEach(ModelPart::resetPose);
         this.applyHeadRotation(netHeadYaw, headPitch, ageInTicks);
 
-        TangofteroEntity tangoftero = (TangofteroEntity) entity;
 
-        if (tangoftero.isPreparingSleep()) {
-            this.animate(tangoftero.preparingSleepState, ModAnimationDefinitions.TangofteroAnimation.preparing_to_sleep, ageInTicks, 1f);
-        } else if (tangoftero.isSleeping()) {
-            this.animate(tangoftero.sleepState, ModAnimationDefinitions.TangofteroAnimation.sleep, ageInTicks, 1f);
-        } else if (tangoftero.isAwakeing()) {
-            this.animate(tangoftero.awakeningState, ModAnimationDefinitions.TangofteroAnimation.awakening, ageInTicks, 1f);
-        } else if (tangoftero.isAttacking()) {
-            this.animate(tangoftero.attackAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
-        } else {
-            this.animate(tangoftero.idleAnimationState, ModAnimationDefinitions.TangofteroAnimation.idle, ageInTicks, 1f);
-            this.animate(tangoftero.biteAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
-            this.animate(tangoftero.roarAnimationState, ModAnimationDefinitions.TangofteroAnimation.roar, ageInTicks, 1f);
-            this.animateWalk(ModAnimationDefinitions.TangofteroAnimation.walk, limbSwing, limbSwingAmount, 2f, 2.5f);
-        }
+        this.animate(entity.preparingSleepState, ModAnimationDefinitions.TangofteroAnimation.preparing_to_sleep, ageInTicks, 1f);
+        this.animate(entity.sleepState, ModAnimationDefinitions.TangofteroAnimation.sleep, ageInTicks, 1f);
+        this.animate(entity.awakeningState, ModAnimationDefinitions.TangofteroAnimation.awakening, ageInTicks, 1f);
+        this.animate(entity.getDeathAnimationState(), ModAnimationDefinitions.TangofteroAnimation.death, ageInTicks, 1f);
+        this.animate(entity.attackAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
+        this.animate(entity.getSprintAnimationState(), ModAnimationDefinitions.TangofteroAnimation.sprint, ageInTicks, 1f);
+        this.animate(entity.getWalkAnimationState(), ModAnimationDefinitions.TangofteroAnimation.walk, ageInTicks, 1f);
+        this.animate(entity.getIdleAnimationState(), ModAnimationDefinitions.TangofteroAnimation.idle, ageInTicks, 1f);
+
+        // Animaciones complementarias independientes
+        this.animate(entity.biteAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
+        this.animate(entity.roarAnimationState, ModAnimationDefinitions.TangofteroAnimation.roar, ageInTicks, 1f);
 
     }
 
