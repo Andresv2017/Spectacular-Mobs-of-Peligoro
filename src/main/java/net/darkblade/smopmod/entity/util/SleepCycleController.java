@@ -30,7 +30,7 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
 
     private final AnimationState preparingSleepState;
     private final AnimationState sleepState;
-    private final AnimationState awakeingState;
+    private final AnimationState awakeningState;
 
     // Duration (in ticks) for each sleep transition animation
     private final int preparingSleepDuration;
@@ -54,14 +54,14 @@ public class SleepCycleController<T extends Animal & ISleepingEntity> {
             T entity,
             AnimationState preparingSleepState,
             AnimationState sleepState,
-            AnimationState awakeingState,
+            AnimationState awakeningState,
             int preparingSleepDuration,
             int awakeingDuration
     ) {
         this.entity = entity;
         this.preparingSleepState = preparingSleepState;
         this.sleepState = sleepState;
-        this.awakeingState = awakeingState;
+        this.awakeningState = awakeningState;
         this.preparingSleepDuration = preparingSleepDuration;
         this.awakeningDuration = awakeingDuration;
         this.entityOffset = entity.getId() % 10; // Light offset to prevent synchronized transitions
