@@ -5,8 +5,10 @@ import net.darkblade.smopmod.entity.BaseEntity;
 import net.darkblade.smopmod.entity.TangofteroVariant;
 import net.darkblade.smopmod.entity.ai.core.FollowOwnerBaseGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
+import net.darkblade.smopmod.entity.ai.core.GenericLayEggGoal;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectNearestEggGoal;
 import net.darkblade.smopmod.entity.ai.tangoftero.*;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepThreatEvaluator;
@@ -70,6 +72,10 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     public void tick() {
         super.tick();
 
+        if (sleepController == null) {
+            sleepController = createSleepController();
+        }
+
         // Se ejecuta en ambos lados
         updateFeedingBehavior(); // rugido, mordida, cooldowns, etc.
 
@@ -77,11 +83,66 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
         if (this.level().isClientSide()) {
             this.updateAnimations(); // activa animaciones extra como ataque
         }
+
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
 
     public final AnimationState attackAnimationState = new AnimationState();
+    public final AnimationState preparingSleepState = new AnimationState();
+    public final AnimationState sleepState = new AnimationState();
+    public final AnimationState awakeningState = new AnimationState();
+
+    private int lastAnimationChangeTick = -20;
+    private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+
+        if (!this.level().isClientSide()) return;
+
+        // Anti-colisión: espera unos ticks antes de iniciar otra animación
+        if (this.tickCount - lastAnimationChangeTick < MIN_TICKS_BETWEEN_ANIMS) {
+            return;
+        }
+
+        if (key == PREPARING_SLEEP) {
+            if (this.isPreparingSleep()) {
+                System.out.println("[CLIENT][Sync] → start preparing_sleep");
+                preparingSleepState.start(this.tickCount);
+                sleepState.stop();
+                awakeningState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                preparingSleepState.stop();
+            }
+        }
+
+        if (key == SLEEPING) {
+            if (this.isSleeping()) {
+                System.out.println("[CLIENT][Sync] → start sleep");
+                sleepState.start(this.tickCount);
+                preparingSleepState.stop();
+                awakeningState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                sleepState.stop();
+            }
+        }
+
+        if (key == AWAKENING) {
+            if (this.isAwakeing()) {
+                System.out.println("[CLIENT][Sync] → start awakeing");
+                awakeningState.start(this.tickCount);
+                sleepState.stop();
+                preparingSleepState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                awakeningState.stop();
+            }
+        }
+    }
 
 
     @Override
@@ -285,6 +346,7 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
         TangofteroVariant variant = Util.getRandom(TangofteroVariant.values(), this.random);
         this.setVariant(variant);
+        this.sleepController = createSleepController();
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 
@@ -307,7 +369,18 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
 
     @Override
     protected SleepCycleController<BaseEntity> createSleepController() {
-        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeningState, 20, 20);
+        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState,
+                getPreparingSleepDuration(), getAwakeningDuration());
+    }
+
+    @Override
+    protected int getPreparingSleepDuration() {
+        return 20;
+    }
+
+    @Override
+    protected int getAwakeningDuration() {
+        return 20;
     }
 
     @Override

@@ -10,7 +10,7 @@ import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.world.entity.Entity;
 
-public class KriftognathusModel<T extends Entity> extends HierarchicalModel<T> {
+public class KriftognathusModel<T extends KriftognathusEntity> extends HierarchicalModel<T> {
 
     private final ModelPart gPiglug;
     private final ModelPart gBody_parts;
@@ -151,23 +151,23 @@ public class KriftognathusModel<T extends Entity> extends HierarchicalModel<T> {
     }
 
     @Override
-    public void setupAnim(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(KriftognathusEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
-        KriftognathusEntity kriftognathus = (KriftognathusEntity) entity;
 
-        if (kriftognathus.isPreparingSleep()) {
-            this.animate(kriftognathus.preparingSleepState, ModAnimationDefinitions.pig_lugAnimation.sleep_preparing, ageInTicks, 1f);
-        } else if (kriftognathus.isSleeping()) {
-            this.animate(kriftognathus.sleepState, ModAnimationDefinitions.pig_lugAnimation.sleep, ageInTicks, 1f);
-        } else if (kriftognathus.isAwakeing()) {
-            this.animate(kriftognathus.awakeingState, ModAnimationDefinitions.pig_lugAnimation.awakening, ageInTicks, 1f);
-        } else if (kriftognathus.isAttacking()) {
-            this.animate(kriftognathus.attackAnimationState, ModAnimationDefinitions.pig_lugAnimation.bite, ageInTicks, 1f);
-        } else {
-            this.animate(kriftognathus.idleAnimationState, ModAnimationDefinitions.pig_lugAnimation.lidle, ageInTicks, 1f);
+
+
+            this.animate(entity.preparingSleepState, ModAnimationDefinitions.pig_lugAnimation.sleep_preparing, ageInTicks, 1f);
+
+            this.animate(entity.sleepState, ModAnimationDefinitions.pig_lugAnimation.sleep, ageInTicks, 1f);
+
+            this.animate(entity.awakeingState, ModAnimationDefinitions.pig_lugAnimation.awakening, ageInTicks, 1f);
+
+            this.animate(entity.attackAnimationState, ModAnimationDefinitions.pig_lugAnimation.bite, ageInTicks, 1f);
+
+            this.animate(entity.idleAnimationState, ModAnimationDefinitions.pig_lugAnimation.lidle, ageInTicks, 1f);
             this.animateWalk(ModAnimationDefinitions.pig_lugAnimation.walk, limbSwing, limbSwingAmount, 1f, 1f);
-        }
+
     }
 
     @Override

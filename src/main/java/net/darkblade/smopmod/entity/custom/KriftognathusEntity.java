@@ -66,6 +66,9 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
     public void tick() {
         super.tick();
         setupAnimationStates();
+        if (sleepController == null) {
+            sleepController = createSleepController();
+        }
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -267,7 +270,18 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
 
     @Override
     protected SleepCycleController<BaseEntity> createSleepController() {
-        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState, 50, 70);
+        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeingState,
+                getPreparingSleepDuration(), getAwakeningDuration());
+    }
+
+    @Override
+    protected int getPreparingSleepDuration() {
+        return 50;
+    }
+
+    @Override
+    protected int getAwakeningDuration() {
+        return 70;
     }
 
     public Set<EntityType<?>> getInterruptingEntityTypes() {
@@ -291,6 +305,7 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
         SpawnGroupData result = super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
+        this.sleepController = createSleepController();
 
         // ─── Assing Born Biome ───
         ResourceLocation biomeKey = pLevel.registryAccess()
