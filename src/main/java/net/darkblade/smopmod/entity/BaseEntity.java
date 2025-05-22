@@ -31,7 +31,7 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
 
     public final AnimationState preparingSleepState = new AnimationState();
     public final AnimationState sleepState = new AnimationState();
-    protected final AnimationState awakeningState = new AnimationState();
+    public final AnimationState awakeningState = new AnimationState();
 
 
     protected BaseEntity(EntityType<? extends TamableAnimal> type, Level level) {
@@ -247,6 +247,52 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             }
             walkAnimationState.stop();
             sprintAnimationState.stop();
+        }
+    }
+
+    private int lastAnimationChangeTick = -20;
+    private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (!this.level().isClientSide()) return;
+        // Anti-colisión: espera unos ticks antes de iniciar otra animación
+        if (this.tickCount - lastAnimationChangeTick < MIN_TICKS_BETWEEN_ANIMS) {
+            return;
+        }
+        if (key == PREPARING_SLEEP) {
+            if (this.isPreparingSleep()) {
+                System.out.println("[CLIENT][Sync] → start preparing_sleep");
+                preparingSleepState.start(this.tickCount);
+                sleepState.stop();
+                awakeningState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                preparingSleepState.stop();
+            }
+        }
+        if (key == SLEEPING) {
+            if (this.isSleeping()) {
+                System.out.println("[CLIENT][Sync] → start sleep");
+                sleepState.start(this.tickCount);
+                preparingSleepState.stop();
+                awakeningState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                sleepState.stop();
+            }
+        }
+        if (key == AWAKENING) {
+            if (this.isAwakeing()) {
+                System.out.println("[CLIENT][Sync] → start awakeing");
+                awakeningState.start(this.tickCount);
+                sleepState.stop();
+                preparingSleepState.stop();
+                lastAnimationChangeTick = this.tickCount;
+            } else {
+                awakeningState.stop();
+            }
         }
     }
 

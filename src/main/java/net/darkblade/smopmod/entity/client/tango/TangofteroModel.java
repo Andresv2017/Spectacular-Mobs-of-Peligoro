@@ -126,16 +126,19 @@ public class TangofteroModel<T extends TangofteroEntity> extends HierarchicalMod
         this.applyHeadRotation(netHeadYaw, headPitch, ageInTicks);
 
 
+        // Sleeping Animations
         this.animate(entity.preparingSleepState, ModAnimationDefinitions.TangofteroAnimation.preparing_to_sleep, ageInTicks, 1f);
         this.animate(entity.sleepState, ModAnimationDefinitions.TangofteroAnimation.sleep, ageInTicks, 1f);
         this.animate(entity.awakeningState, ModAnimationDefinitions.TangofteroAnimation.awakening, ageInTicks, 1f);
+
+        // Basic Animations
         this.animate(entity.getDeathAnimationState(), ModAnimationDefinitions.TangofteroAnimation.death, ageInTicks, 1f);
-        this.animate(entity.attackAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
         this.animate(entity.getSprintAnimationState(), ModAnimationDefinitions.TangofteroAnimation.sprint, ageInTicks, 1f);
         this.animate(entity.getWalkAnimationState(), ModAnimationDefinitions.TangofteroAnimation.walk, ageInTicks, 1f);
         this.animate(entity.getIdleAnimationState(), ModAnimationDefinitions.TangofteroAnimation.idle, ageInTicks, 1f);
 
-        // Animaciones complementarias independientes
+        // Independent Animations
+        this.animate(entity.attackAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
         this.animate(entity.biteAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
         this.animate(entity.roarAnimationState, ModAnimationDefinitions.TangofteroAnimation.roar, ageInTicks, 1f);
 

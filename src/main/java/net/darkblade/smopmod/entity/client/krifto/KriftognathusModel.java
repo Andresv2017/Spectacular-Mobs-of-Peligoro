@@ -154,19 +154,19 @@ public class KriftognathusModel<T extends KriftognathusEntity> extends Hierarchi
     public void setupAnim(KriftognathusEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
+        // Sleeping Animations
+        this.animate(entity.preparingSleepState, ModAnimationDefinitions.pig_lugAnimation.sleep_preparing, ageInTicks, 1f);
+        this.animate(entity.sleepState, ModAnimationDefinitions.pig_lugAnimation.sleep, ageInTicks, 1f);
+        this.animate(entity.awakeningState, ModAnimationDefinitions.pig_lugAnimation.awakening, ageInTicks, 1f);
 
+        // Basic Animations
+        this.animate(entity.getDeathAnimationState(), ModAnimationDefinitions.pig_lugAnimation.death, ageInTicks, 1f);
+        this.animate(entity.getSprintAnimationState(), ModAnimationDefinitions.pig_lugAnimation.sprint, ageInTicks, 1f);
+        this.animate(entity.getWalkAnimationState(), ModAnimationDefinitions.pig_lugAnimation.walk, ageInTicks, 1f);
+        this.animate(entity.getIdleAnimationState(), ModAnimationDefinitions.pig_lugAnimation.lidle, ageInTicks, 1f);
 
-
-            this.animate(entity.preparingSleepState, ModAnimationDefinitions.pig_lugAnimation.sleep_preparing, ageInTicks, 1f);
-
-            this.animate(entity.sleepState, ModAnimationDefinitions.pig_lugAnimation.sleep, ageInTicks, 1f);
-
-            this.animate(entity.awakeingState, ModAnimationDefinitions.pig_lugAnimation.awakening, ageInTicks, 1f);
-
-            this.animate(entity.attackAnimationState, ModAnimationDefinitions.pig_lugAnimation.bite, ageInTicks, 1f);
-
-            this.animate(entity.idleAnimationState, ModAnimationDefinitions.pig_lugAnimation.lidle, ageInTicks, 1f);
-            this.animateWalk(ModAnimationDefinitions.pig_lugAnimation.walk, limbSwing, limbSwingAmount, 1f, 1f);
+        // Independent Animations
+        this.animate(entity.attackAnimationState, ModAnimationDefinitions.pig_lugAnimation.bite, ageInTicks, 1f);
 
     }
 
