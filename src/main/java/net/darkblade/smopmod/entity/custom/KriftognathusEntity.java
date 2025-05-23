@@ -2,6 +2,7 @@ package net.darkblade.smopmod.entity.custom;
 
 import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.entity.BaseEntity;
+import net.darkblade.smopmod.entity.FlyingEntity;
 import net.darkblade.smopmod.entity.GenderedEntity;
 import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericLayEggGoal;
@@ -49,7 +50,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class KriftognathusEntity extends GenderedEntity implements ISleepThreatEvaluator, ISleepAwareness, CustomEggBorn {
+import static org.openjdk.nashorn.internal.objects.NativeWeakSet.add;
+
+public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEvaluator, ISleepAwareness, CustomEggBorn {
 
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<String> SPAWN_BIOME = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.STRING);
@@ -127,7 +130,8 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
                 .add(Attributes.MOVEMENT_SPEED, 0.20D)
                 .add(Attributes.ATTACK_SPEED, 0.4D)
                 .add(Attributes.ATTACK_KNOCKBACK, 0.1F)
-                .add(Attributes.ATTACK_DAMAGE, 2.0F);
+                .add(Attributes.ATTACK_DAMAGE, 2.0F)
+                .add(Attributes.FLYING_SPEED, 2.0F);
     }
 
     private static final Item TAMING_ITEM = Items.RABBIT;
@@ -322,4 +326,5 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
         // (Optional) Debug message
         System.out.println("[BiomeTexture] Asignado: " + biomePath + " para entidad ID: " + this.getId());
     }
+
 }

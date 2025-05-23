@@ -14,6 +14,7 @@ import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
 import net.darkblade.smopmod.entity.custom.TangofteroEntity;
 import net.darkblade.smopmod.item.ModCreativeModTabs;
 import net.darkblade.smopmod.item.ModItems;
+import net.darkblade.smopmod.packet.InitPackets;
 import net.darkblade.smopmod.packet.RiderActionPacket;
 import net.darkblade.smopmod.structures.StructureRegister;
 import net.darkblade.smopmod.structures.placements.StructurePlacementTypeRegister;
@@ -49,6 +50,9 @@ public class SMOP
         ModItems.register(modEventBus);
         ModBlocks.register(modEventBus);
         RiderActionPacket.ModMessages.register();
+
+        InitPackets.register();
+
         ModEffects.EFFECTS.register(modEventBus);
 
 

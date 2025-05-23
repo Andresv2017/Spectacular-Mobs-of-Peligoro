@@ -50,11 +50,15 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             this.updateSprintStatus();
         }
         if (this.level().isClientSide()) {
-            this.updateBaseAnimations();
+            if (!(this instanceof FlyingEntity)) {
+                this.updateBaseAnimations();
+            }
         }
         if (isOrderedToSit()) {
             getNavigation().stop();
-            setDeltaMovement(Vec3.ZERO);
+            if (this.onGround()) {
+                setDeltaMovement(Vec3.ZERO);
+            }
         }
     }
 
@@ -242,13 +246,20 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
                 idleAnimationState.stop();
             }
         } else {
-            if (!idleAnimationState.isStarted()) {
-                idleAnimationState.start(this.tickCount);
+
+            if (this.onGround()) {
+                if (!idleAnimationState.isStarted()) {
+                    idleAnimationState.start(this.tickCount);
+                }
+            } else {
+                idleAnimationState.stop();
             }
+
             walkAnimationState.stop();
             sprintAnimationState.stop();
         }
     }
+
 
     private int lastAnimationChangeTick = -20;
     private static final int MIN_TICKS_BETWEEN_ANIMS = 3;
