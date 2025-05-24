@@ -38,27 +38,38 @@ public class FlightStateController {
         if (current == FlightState.BOOST && entity.tickCount - stateStartTick < entity.getBoostDuration()) return;
         if (current == FlightState.LANDING && entity.tickCount - stateStartTick < entity.getLandingDuration()) return;
 
-        // Aterrizaje
-        if (onGround) {
-            if (current != FlightState.GROUND) {
+        // ✅ FINALIZA aterrizaje si ya está en el suelo
+        if (current == FlightState.LANDING
+                && onGround
+                && entity.tickCount - stateStartTick >= entity.getLandingDuration()) {
+            System.out.println("[FLIGHT] Aterrizaje completado. Estado → GROUND (tick " + entity.tickCount + ")");
+            entity.setFlightState(FlightState.GROUND);
+            entity.switchNavigation(false);
+            return;
+        }
+
+        // Aterrizaje solo si no quiere volar y aún está en el aire
+        if (!entity.wantsToFly() && !onGround) {
+            if (current != FlightState.LANDING) {
+                System.out.println("[FLIGHT] Iniciando descenso (tick " + entity.tickCount + ")");
                 entity.setFlightState(FlightState.LANDING);
                 entity.switchNavigation(false);
             }
             return;
         }
 
-        // Despegue
-        if ((current == FlightState.GROUND || current == FlightState.LANDING)
-                && !onGround
+        // Despegue desde el suelo
+        if ((current == FlightState.GROUND || current == FlightState.LANDING || current == FlightState.FLY_IDLE)
                 && entity.wantsToFly()
-                && vertical >= -0.3
                 && entity.tickCount > 5
-                && !entity.isFlying()) { // ⬅️ esto evita StartFlight si ya está volando
+                && !entity.isFlying()) {
 
+            System.out.println("[FLIGHT] Iniciando vuelo desde estado " + current + " (tick " + entity.tickCount + ")");
             entity.setFlightState(FlightState.START_FLIGHT);
             entity.switchNavigation(true);
             return;
         }
+
 
         // Impulso desde flotación
         if (current == FlightState.FLY_IDLE && speed > entity.getFlightMoveThreshold()) {
@@ -79,6 +90,11 @@ public class FlightStateController {
             entity.setFlightState(FlightState.FLY_IDLE);
         }
     }
+
+    public void resetStateTracking() {
+        this.lastState = entity.getFlightState();
+        this.stateStartTick = entity.tickCount;
+    }
+
+
 }
-
-

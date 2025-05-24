@@ -5,19 +5,25 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.Level;
 
+import java.util.EnumSet;
+
 public class FlyFromNowAndThenGoal extends Goal {
 
-    public FlyingEntity mob;
+    protected final FlyingEntity mob;
     private int timer;
+    private BlockPos landingPos = null;
 
     public FlyFromNowAndThenGoal(FlyingEntity mob) {
         this.mob = mob;
-        this.timer = mob.getRandom().nextInt(0,2000);
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE)); // Indica que este goal mueve a la entidad
+        this.timer = mob.getRandom().nextInt(100, 2000); // Inicial para testeo
     }
 
     @Override
     public boolean canUse() {
-        return !mob.isTame() && !mob.isOrderedToSit();
+        boolean result = !mob.isTame() && !mob.isOrderedToSit();
+        System.out.println("[AI] canUse() → " + result + " | Tame: " + mob.isTame() + ", Sit: " + mob.isOrderedToSit());
+        return result;
     }
 
     @Override
@@ -25,35 +31,47 @@ public class FlyFromNowAndThenGoal extends Goal {
         return !mob.isTame() && !mob.isOrderedToSit();
     }
 
-    BlockPos landingPos = null;
     @Override
     public void tick() {
-        if(timer--<=0){
+        // Alterna el deseo de volar periódicamente
+        if (--timer <= 0) {
             boolean newState = !mob.getGoalsRequireFlying();
             mob.setGoalsRequireFlying(newState);
-            this.timer = mob.getRandom().nextInt(0,2000);
-            landingPos = null;
-            // Log en consola
             System.out.println("[AI] goalsRequireFlying → " + newState + " (tick " + mob.tickCount + ")");
+            this.timer = mob.getRandom().nextInt(100, 2000); // Reinicia el temporizador
+            landingPos = null; // Resetea el objetivo de aterrizaje
+        }
 
-        } else if (timer < 50 && !mob.onGround() && mob.getGoalsRequireFlying())
-            landingPos = findLandingSpot();
+        // Planea un aterrizaje si está a punto de aterrizar
+        else if (timer < 50 && mob.getGoalsRequireFlying() && !mob.onGround()) {
+            if (landingPos == null) {
+                landingPos = findLandingSpot();
+                if (landingPos != null) {
+                    System.out.println("[AI] Planeando aterrizaje en " + landingPos);
+                }
+            }
 
-        if(landingPos != null)
-            mob.getNavigation().moveTo(landingPos.getX(), landingPos.getY(), landingPos.getZ(), 1.0D);
-
-        super.tick();
+            if (landingPos != null) {
+                mob.getNavigation().moveTo(landingPos.getX(), landingPos.getY(), landingPos.getZ(), 1.0D);
+            }
+        }
     }
 
     protected BlockPos findLandingSpot() {
         BlockPos position = mob.blockPosition();
         Level level = mob.level();
 
-        while (position.getY() > level.getMinBuildHeight() && level.isEmptyBlock(position))
+        // Busca el primer bloque sólido hacia abajo
+        while (position.getY() > level.getMinBuildHeight() && level.isEmptyBlock(position)) {
             position = position.below();
+        }
 
-        if (!level.getFluidState(position).isEmpty())
-            return position;
-        return null;
+        // Evita agua
+        if (!level.getFluidState(position).isEmpty()) {
+            return null;
+        }
+
+        return position;
     }
 }
+

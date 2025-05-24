@@ -65,7 +65,7 @@ public class FlyingEntity extends GenderedEntity implements IFlyingStateConfigur
     }
 
     public void switchNavigation(boolean fly) {
-        System.out.println("[FlyingEntity] switchNavigation → fly: " + fly + ", tick: " + this.tickCount);
+        //System.out.println("[FlyingEntity] switchNavigation → fly: " + fly + ", tick: " + this.tickCount);
 
         if (fly) {
             this.moveControl = new FlyingMoveControl(this, 20, false);
@@ -99,28 +99,31 @@ public class FlyingEntity extends GenderedEntity implements IFlyingStateConfigur
 
         if (!level().isClientSide()) {
             flightStateController.update();
-        }
 
-        // Verificación de sincronización del estado de vuelo
-        if (!this.level().isClientSide) {
-            FlightState current = this.getFlightState();
-            if (current != lastLoggedState) {
-                System.out.println("[SERVER] Tick " + this.tickCount + " → FLIGHT_STATE: " + current);
-                lastLoggedState = current;
-            }
-
-            boolean flying = this.entityData.get(IS_FLYING);
-            if (flying != lastLoggedFlying) {
-                System.out.println("[SERVER] Tick " + this.tickCount + " → IS_FLYING: " + flying);
-                lastLoggedFlying = flying;
+            if (this.tickCount % 40 == 0) {
+                System.out.println("[STATE] Tick " + this.tickCount + " → FLIGHT_STATE: " + this.getFlightState()
+                        + ", isFlying: " + this.isFlying()
+                        + ", wantsToFly: " + this.wantsToFly()
+                        + ", goalsRequireFlying: " + this.getGoalsRequireFlying());
             }
         }
 
+        // 🔇 Se eliminan logs de sincronización
+        FlightState current = this.getFlightState();
+        if (current != lastLoggedState) {
+            lastLoggedState = current;
+        }
+
+        boolean flying = this.entityData.get(IS_FLYING);
+        if (flying != lastLoggedFlying) {
+            lastLoggedFlying = flying;
+        }
+
+        // 🔇 Animaciones de debug solo si estás en el cliente
         if (this.tickCount % 20 == 0 && this.level().isClientSide) {
             this.logGroundAnimations(this.tickCount); // desde BaseEntity
             this.debugActiveAnimations();
         }
-
     }
 
 
@@ -201,11 +204,17 @@ public class FlyingEntity extends GenderedEntity implements IFlyingStateConfigur
 
     @Override
     public boolean wantsToFly() {
-        return !this.onGround();
+        boolean result = this.getGoalsRequireFlying() || this.getTarget() != null || this.isFollowingOwner();
+        //System.out.println("[AI] wantsToFly() → " + result + " | GoalsRequireFlying: " + this.getGoalsRequireFlying());
+        return result;
     }
 
-
     private final FlightStateController flightStateController = new FlightStateController(this);
+
+    public FlightStateController getFlightStateController() {
+        return this.flightStateController;
+    }
+
 
     private FlightState lastSyncedState = null;
 
@@ -213,43 +222,31 @@ public class FlyingEntity extends GenderedEntity implements IFlyingStateConfigur
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
 
-        if (key.equals(FLIGHT_STATE)) {
+        if (FLIGHT_STATE.equals(key)) {
+            stopAllFlightAnimations(); // 🔁 Siempre detiene todas antes de activar una nueva
+
             FlightState state = this.getFlightState();
 
-            stopAllFlightAnimations();
-            stopAllGroundAnimations(); // <- 🔴 Esto es clave
-
-            switch (state) {
-                case START_FLIGHT -> {
-                    startFlightAnimationState.start(this.tickCount);
-                    System.out.println("[ANIM] Tick " + this.tickCount + " → start_flight");
-                }
-                case FLY_IDLE -> {
-                    flyIdleAnimationState.start(this.tickCount);
-                    System.out.println("[ANIM] Tick " + this.tickCount + " → fly_idle");
-                }
-                case BOOST -> {
-                    boostAnimationState.start(this.tickCount);
-                    System.out.println("[ANIM] Tick " + this.tickCount + " → boost");
-                }
-                case FLY_MOVE -> {
-                    flyMoveAnimationState.start(this.tickCount);
-                    System.out.println("[ANIM] Tick " + this.tickCount + " → fly_move");
-                }
-                case LANDING -> {
-                    landingAnimationState.start(this.tickCount);
-                    System.out.println("[ANIM] Tick " + this.tickCount + " → landing");
-                }
+            // Evita activar animaciones de vuelo si no está volando
+            if (!this.isFlying() && state != FlightState.GROUND) {
+                System.out.println("[DEBUG] Cancelando animación aérea en tierra: " + state);
+                return;
             }
 
-            System.out.println("[CLIENT] Tick " + this.tickCount + " → FLIGHT_STATE: " + state);
-        }
-
-        if (key.equals(IS_FLYING)) {
-            boolean flying = this.entityData.get(IS_FLYING);
-            System.out.println("[CLIENT] Tick " + this.tickCount + " → IS_FLYING: " + flying);
+            switch (state) {
+                case GROUND -> {
+                    // Nada aquí. BaseEntity activa animaciones terrestres.
+                }
+                case START_FLIGHT -> startFlightAnimationState.start(this.tickCount);
+                case FLY_IDLE -> flyIdleAnimationState.start(this.tickCount);
+                case BOOST -> boostAnimationState.start(this.tickCount);
+                case FLY_MOVE -> flyMoveAnimationState.start(this.tickCount);
+                case LANDING -> landingAnimationState.start(this.tickCount);
+            }
         }
     }
+
+
 
     protected void stopAllGroundAnimations() {
         idleAnimationState.stop();
@@ -268,7 +265,7 @@ public class FlyingEntity extends GenderedEntity implements IFlyingStateConfigur
     }
 
     public void debugActiveAnimations() {
-        System.out.println("[DEBUG] Animaciones activas en tick " + this.tickCount + ":");
+        //System.out.println("[DEBUG] Animaciones activas en tick " + this.tickCount + ":");
 
         if (startFlightAnimationState.isStarted()) System.out.println(" - start_flight");
         if (flyIdleAnimationState.isStarted()) System.out.println(" - fly_idle");
@@ -290,6 +287,7 @@ public class FlyingEntity extends GenderedEntity implements IFlyingStateConfigur
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor world, DifficultyInstance difficulty, MobSpawnType reason,
                                         @Nullable SpawnGroupData data, @Nullable CompoundTag tag) {
+
         BlockPos posBelow = this.blockPosition().below();
         boolean hasSolidGround = world.getBlockState(posBelow).entityCanStandOn(world, posBelow, this);
 
@@ -299,14 +297,24 @@ public class FlyingEntity extends GenderedEntity implements IFlyingStateConfigur
             this.setNoGravity(false);
             this.switchNavigation(false);
         } else {
-            this.setFlightState(FlightState.FLY_IDLE); // 🛠️ Cambiado de START_FLIGHT a FLY_IDLE
+            this.setFlightState(FlightState.FLY_IDLE); // 🛠️ Empieza flotando si no hay suelo
             this.setFlying(true);
             this.setNoGravity(true);
             this.switchNavigation(true);
         }
 
+        // 🔁 Reforzar animación segura
+        this.stopAllFlightAnimations();
+        this.stopAllGroundAnimations();
+
+        // 🔐 Reforzar sincronía lógica con el controlador (si accedes al campo o usas setter)
+        if (!this.level().isClientSide()) {
+            this.getFlightStateController().resetStateTracking(); // <-- este método deberías tenerlo
+        }
+
         System.out.println("[DEBUG] Finalize Spawn → FLIGHT_STATE: " + this.getFlightState() + ", isFlying: " + this.isFlying());
         return super.finalizeSpawn(world, difficulty, reason, data, tag);
     }
+
 
 }
