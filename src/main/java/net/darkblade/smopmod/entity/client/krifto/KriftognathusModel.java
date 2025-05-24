@@ -170,6 +170,7 @@ public class KriftognathusModel<T extends KriftognathusEntity> extends Hierarchi
         this.animate(entity.getFlyMoveAnimationState(), ModAnimationDefinitions.pig_lugAnimation.flight, ageInTicks, 1f);
         this.animate(entity.getStartFlightAnimationState(), ModAnimationDefinitions.pig_lugAnimation.start_flight, ageInTicks, 1f);
         this.animate(entity.getLandingAnimationState(), ModAnimationDefinitions.pig_lugAnimation.landing, ageInTicks, 1f);
+        this.animate(entity.getBoostAnimationState(), ModAnimationDefinitions.pig_lugAnimation.boost, ageInTicks, 1f);
 
         // Independent Animations
         this.animate(entity.attackAnimationState, ModAnimationDefinitions.pig_lugAnimation.bite, ageInTicks, 1f);

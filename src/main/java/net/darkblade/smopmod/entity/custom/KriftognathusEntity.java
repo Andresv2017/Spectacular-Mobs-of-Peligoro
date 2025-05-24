@@ -6,6 +6,8 @@ import net.darkblade.smopmod.entity.FlyingEntity;
 import net.darkblade.smopmod.entity.GenderedEntity;
 import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericLayEggGoal;
+import net.darkblade.smopmod.entity.ai.core.flying.FlyFromNowAndThenGoal;
+import net.darkblade.smopmod.entity.ai.core.flying.RandomStrollAndFlightGoal;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectOwnEggGoal;
@@ -50,7 +52,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import static org.openjdk.nashorn.internal.objects.NativeWeakSet.add;
 
 public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEvaluator, ISleepAwareness, CustomEggBorn {
 
@@ -103,25 +104,38 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
 
     @Override
     protected void registerGoals() {
+        // Básico
         this.goalSelector.addGoal(0, new FloatGoal(this));
 
+        // Combate y reproducción
         this.goalSelector.addGoal(1, new KriftoAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(2, new GenericBreedGoal<>(this, 1.0));
+
+        // Vuelo por IA: activa o desactiva vuelo
+        this.goalSelector.addGoal(3, new FlyFromNowAndThenGoal(this)); // ⬅️ Alta prioridad
+
+        // Defensa de huevo
         EggGoalRegistry.registerWithOwnGoal(
                 this,
-                ModBlocks.KRIFFO_EGG, // El bloque de huevo
-                4, 6, // stayNearEggRadius, defenseRadius
-                true, true, // attackOnApproach, attackOnBreak
-                ProtectEggBaseGoal.EggBreakReaction.IGNORE, // No huye si lo rompen
+                ModBlocks.KRIFFO_EGG,
+                4, 6,
+                true, true,
+                ProtectEggBaseGoal.EggBreakReaction.IGNORE,
                 PREY_SELECTOR,
-                4// Prioridad base del goal
+                4
         );
-        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 
+        // Movimiento aleatorio adaptado a vuelo
+        this.goalSelector.addGoal(5, new RandomStrollAndFlightGoal(this, 1.1D));
+
+        // Mirar alrededor
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+
+        // Reacción al daño
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
     }
+
 
     public static AttributeSupplier.Builder createAttributes() {
         return Animal.createLivingAttributes()
@@ -327,4 +341,23 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
         System.out.println("[BiomeTexture] Asignado: " + biomePath + " para entidad ID: " + this.getId());
     }
 
+    @Override
+    public int getStartFlightDuration() {
+        return 14; // o lo que dure tu animación de despegue
+    }
+
+    @Override
+    public int getBoostDuration() {
+        return 28; // duración del impulso
+    }
+
+    @Override
+    public int getLandingDuration() {
+        return 26; // duración del aterrizaje
+    }
+
+    @Override
+    public double getFlightMoveThreshold() {
+        return 0.02; // más sensible para moverse en el aire
+    }
 }

@@ -231,33 +231,44 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
 
         double speed = this.getDeltaMovement().horizontalDistanceSqr();
 
-        if (speed > 1.0E-6) {
-            if (this.isSprinting()) {
-                if (!sprintAnimationState.isStarted()) {
-                    sprintAnimationState.start(this.tickCount);
+        if (this.onGround()) {
+            // 🔹 Solo aplicar animaciones terrestres si está en el suelo
+            if (speed > 1.0E-6) {
+                if (this.isSprinting()) {
+                    if (!sprintAnimationState.isStarted()) {
+                        sprintAnimationState.start(this.tickCount);
+                    }
+                    walkAnimationState.stop();
+                    idleAnimationState.stop();
+                } else {
+                    if (!walkAnimationState.isStarted()) {
+                        walkAnimationState.start(this.tickCount);
+                    }
+                    sprintAnimationState.stop();
+                    idleAnimationState.stop();
                 }
-                walkAnimationState.stop();
-                idleAnimationState.stop();
             } else {
-                if (!walkAnimationState.isStarted()) {
-                    walkAnimationState.start(this.tickCount);
-                }
-                sprintAnimationState.stop();
-                idleAnimationState.stop();
-            }
-        } else {
-
-            if (this.onGround()) {
                 if (!idleAnimationState.isStarted()) {
                     idleAnimationState.start(this.tickCount);
                 }
-            } else {
-                idleAnimationState.stop();
+                walkAnimationState.stop();
+                sprintAnimationState.stop();
             }
-
+        } else {
+            // 🔴 En el aire: detener cualquier animación terrestre activa
             walkAnimationState.stop();
             sprintAnimationState.stop();
+            idleAnimationState.stop();
         }
+    }
+
+
+    public void logGroundAnimations(int tick) {
+        System.out.println("[DEBUG] Animaciones terrestres activas en tick " + tick + ":");
+        if (idleAnimationState.isStarted()) System.out.println(" - idle");
+        if (walkAnimationState.isStarted()) System.out.println(" - walk");
+        if (sprintAnimationState.isStarted()) System.out.println(" - sprint");
+        if (deathAnimationState.isStarted()) System.out.println(" - death");
     }
 
 
