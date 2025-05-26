@@ -46,6 +46,7 @@ public class TangofteroRender extends MobRenderer<TangofteroEntity, TangofteroMo
     public ResourceLocation getTextureLocation(TangofteroEntity tangofteroEntity) {
         return LOCATION_BY_VARIANT.get(tangofteroEntity.getVariant());
     }
+
     @Override
     public void render(TangofteroEntity pEntity, float pEntityYaw, float pPartialTicks, PoseStack pMatrixStack,
                        MultiBufferSource pBuffer, int pPackedLight) {

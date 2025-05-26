@@ -19,4 +19,7 @@ public class ModModelLayers {
 
     public static final ModelLayerLocation NIRAS = new ModelLayerLocation(
             new ResourceLocation(SMOP.MOD_ID,"niras_layer"),"main");
+
+    public static final ModelLayerLocation SALMON = new ModelLayerLocation(
+            new ResourceLocation(SMOP.MOD_ID,"salmon_layer"),"main");
 }

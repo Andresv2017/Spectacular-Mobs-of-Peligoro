@@ -1,10 +1,7 @@
 package net.darkblade.smopmod.entity;
 
 import net.darkblade.smopmod.SMOP;
-import net.darkblade.smopmod.entity.custom.Hell_HippoEntity;
-import net.darkblade.smopmod.entity.custom.KriftognathusEntity;
-import net.darkblade.smopmod.entity.custom.NirasmosaurusEntity;
-import net.darkblade.smopmod.entity.custom.TangofteroEntity;
+import net.darkblade.smopmod.entity.custom.*;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -30,7 +27,11 @@ public class ModEntities {
 
     public static final RegistryObject<EntityType<NirasmosaurusEntity>> NIRAS =
             ENTITY_TYPES.register("niras", () -> EntityType.Builder.of(NirasmosaurusEntity::new, MobCategory.CREATURE)
-                    .sized(1f, 1f).build("niras"));
+                    .sized(1.5f, 1.5f).build("niras"));
+
+    public static final RegistryObject<EntityType<SalmonEntity>> SALMON =
+            ENTITY_TYPES.register("salmon", () -> EntityType.Builder.of(SalmonEntity::new, MobCategory.CREATURE)
+                    .sized(1f, 1f).build("salmon"));
 
     public static void register(IEventBus eventBus){
         ENTITY_TYPES.register(eventBus);
