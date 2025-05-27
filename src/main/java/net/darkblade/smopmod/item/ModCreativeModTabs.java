@@ -25,6 +25,7 @@ public class ModCreativeModTabs {
                         pOutput.accept(ModItems.TANGOFTERO_EGG_ITEM.get());
                         pOutput.accept(ModItems.KRIFTO_EGG_ITEM.get());
                         pOutput.accept(ModItems.KRIFTOGNATHUS_SPAWN_EGG.get());
+                        pOutput.accept(ModItems.SALMON_SPAWN_EGG.get());
 
                     })
                     .build());

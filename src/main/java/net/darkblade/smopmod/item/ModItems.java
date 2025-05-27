@@ -16,11 +16,14 @@ public class ModItems {
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, SMOP.MOD_ID);
 
+    // ───────────────────────────────────────────────────── FOOD ─────
     public static final RegistryObject<Item> HELL_HIPPO_COOKED_MEAT = ITEMS.register("hell_hippo_cooked_meat",
             () -> new Item(new Item.Properties().food(ModFoods.HELL_HIPPO_COOKED_MEAT)));
 
     public static final RegistryObject<Item> HELL_HIPPO_RAW_MEAT = ITEMS.register("hell_hippo_raw_meat",
             () -> new Item(new Item.Properties().food(ModFoods.HELL_HIPPO_RAW_MEAT)));
+
+    // ───────────────────────────────────────────────────── SPAWN EGGS ─────
 
     public static final RegistryObject<Item> HELL_HIPPO_SPAWN_EGG = ITEMS.register("hell_hippo_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.HELL_HIPPO, 0x0a0909, 0xcd1d1d, new Item.Properties()));
@@ -31,8 +34,15 @@ public class ModItems {
     public static final RegistryObject<Item> KRIFTOGNATHUS_SPAWN_EGG = ITEMS.register("kriftognathus_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.KIFTO, 0xFFD700, 0xADD8E6, new Item.Properties()));
 
+    public static final RegistryObject<Item> SALMON_SPAWN_EGG = ITEMS.register("salmon_spawn_egg",
+            () -> new ForgeSpawnEggItem(ModEntities.SALMON, 0xFA8072, 0x88773C, new Item.Properties()));
+
+    // ───────────────────────────────────────────────────── ARMORS ─────
+
     public static final RegistryObject<Item> HELHIPPO_ARMOR = ITEMS.register("hellhippo_armor", () ->
             new HorseArmorItem(15, "", new Item.Properties().stacksTo(1)));
+
+    // ───────────────────────────────────────────────────── EGGS ITEM ─────
 
     public static final RegistryObject<Item> TANGOFTERO_EGG_ITEM = ITEMS.register("tangoftero_egg",
             () -> new BlockItem(ModBlocks.TANGOFTERO_EGG.get(), new Item.Properties()));

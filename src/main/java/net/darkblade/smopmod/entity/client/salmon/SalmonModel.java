@@ -2,6 +2,7 @@ package net.darkblade.smopmod.entity.client.salmon;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.darkblade.smopmod.entity.animations.ModAnimationDefinitions;
 import net.darkblade.smopmod.entity.custom.SalmonEntity;
 import net.minecraft.client.model.HierarchicalModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -134,6 +135,17 @@ public class SalmonModel<T extends SalmonEntity> extends HierarchicalModel<T> {
     @Override
     public void setupAnim(SalmonEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         this.root().getAllParts().forEach(ModelPart::resetPose);
+
+        // Basic Water
+        this.animate(entity.getWaterIdleAnimationState(), SalmonAnimations.idle, ageInTicks, 1f);
+        this.animate(entity.getSwimAnimationState(), SalmonAnimations.swim, ageInTicks, 1f);
+        this.animate(entity.getSwimSprintAnimationState(), SalmonAnimations.fast_swim, ageInTicks, 1f);
+        this.animate(entity.getFloopingAnimationState(), SalmonAnimations.flopping, ageInTicks, 1f);
+        this.animate(entity.getWaterDeathAnimationState(), SalmonAnimations.water_death, ageInTicks, 1f);
+        this.animate(entity.getLandDeathAnimationState(), SalmonAnimations.land_death, ageInTicks, 1f);
+
+        // Independent Animations
+        this.animate(entity.attackAnimationState, SalmonAnimations.bite, ageInTicks, 1f);
     }
 
     @Override

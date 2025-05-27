@@ -186,11 +186,17 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
     protected final AnimationState walkAnimationState = new AnimationState();
     protected final AnimationState sprintAnimationState = new AnimationState();
     protected final AnimationState deathAnimationState = new AnimationState();
+    protected final AnimationState waterIdleAnimationState = new AnimationState();
+
+    protected boolean shouldPlayWaterIdleAnimation() {
+        return this.isInWater();
+    }
 
     public AnimationState getIdleAnimationState() { return idleAnimationState; }
     public AnimationState getWalkAnimationState() { return walkAnimationState; }
     public AnimationState getSprintAnimationState() { return sprintAnimationState; }
     public AnimationState getDeathAnimationState() { return deathAnimationState; }
+    public AnimationState getWaterIdleAnimationState() { return waterIdleAnimationState; }
 
 
     public void updateAnimations() {
@@ -219,9 +225,23 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             walkAnimationState.stop();
             sprintAnimationState.stop();
             idleAnimationState.stop();
-            if (!deathAnimationState.isStarted()) {
+
+            if (!(this instanceof WaterEntity) && !deathAnimationState.isStarted()) {
                 deathAnimationState.start(this.tickCount);
+                System.out.println("[ANIM] Ejecutando Death Por Defecto " + this.tickCount);
             }
+
+            return;
+        }
+
+        // 🔹 Animación especial para agua (default: siempre en agua)
+        if (shouldPlayWaterIdleAnimation()) {
+            if (!waterIdleAnimationState.isStarted()) {
+                waterIdleAnimationState.start(this.tickCount);
+            }
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
             return;
         }
 
@@ -248,6 +268,7 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             walkAnimationState.stop();
             sprintAnimationState.stop();
         }
+        waterIdleAnimationState.stop();
     }
 
     private int lastAnimationChangeTick = -20;

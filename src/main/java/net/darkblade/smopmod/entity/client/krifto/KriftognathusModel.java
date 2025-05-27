@@ -155,18 +155,19 @@ public class KriftognathusModel<T extends KriftognathusEntity> extends Hierarchi
         this.root().getAllParts().forEach(ModelPart::resetPose);
 
         // Sleeping Animations
-        this.animate(entity.preparingSleepState, ModAnimationDefinitions.pig_lugAnimation.sleep_preparing, ageInTicks, 1f);
-        this.animate(entity.sleepState, ModAnimationDefinitions.pig_lugAnimation.sleep, ageInTicks, 1f);
-        this.animate(entity.awakeningState, ModAnimationDefinitions.pig_lugAnimation.awakening, ageInTicks, 1f);
+        this.animate(entity.preparingSleepState, KriftoAnimations.sleep_preparing, ageInTicks, 1f);
+        this.animate(entity.sleepState, KriftoAnimations.sleep, ageInTicks, 1f);
+        this.animate(entity.awakeningState, KriftoAnimations.awakening, ageInTicks, 1f);
 
         // Basic Animations
-        this.animate(entity.getDeathAnimationState(), ModAnimationDefinitions.pig_lugAnimation.death, ageInTicks, 1f);
-        this.animate(entity.getSprintAnimationState(), ModAnimationDefinitions.pig_lugAnimation.sprint, ageInTicks, 1f);
-        this.animate(entity.getWalkAnimationState(), ModAnimationDefinitions.pig_lugAnimation.walk, ageInTicks, 1f);
-        this.animate(entity.getIdleAnimationState(), ModAnimationDefinitions.pig_lugAnimation.lidle, ageInTicks, 1f);
+        this.animate(entity.getDeathAnimationState(), KriftoAnimations.death, ageInTicks, 1f);
+        this.animate(entity.getSprintAnimationState(), KriftoAnimations.sprint, ageInTicks, 1f);
+        this.animate(entity.getWalkAnimationState(), KriftoAnimations.walk, ageInTicks, 1f);
+        this.animate(entity.getIdleAnimationState(), KriftoAnimations.lidle, ageInTicks, 1f);
+        this.animate(entity.getWaterIdleAnimationState(), KriftoAnimations.swim, ageInTicks, 1f);
 
         // Independent Animations
-        this.animate(entity.attackAnimationState, ModAnimationDefinitions.pig_lugAnimation.bite, ageInTicks, 1f);
+        this.animate(entity.attackAnimationState, KriftoAnimations.attack, ageInTicks, 1f);
 
     }
 

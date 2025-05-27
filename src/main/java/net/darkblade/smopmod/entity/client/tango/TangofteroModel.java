@@ -127,20 +127,21 @@ public class TangofteroModel<T extends TangofteroEntity> extends HierarchicalMod
 
 
         // Sleeping Animations
-        this.animate(entity.preparingSleepState, ModAnimationDefinitions.TangofteroAnimation.preparing_to_sleep, ageInTicks, 1f);
-        this.animate(entity.sleepState, ModAnimationDefinitions.TangofteroAnimation.sleep, ageInTicks, 1f);
-        this.animate(entity.awakeningState, ModAnimationDefinitions.TangofteroAnimation.awakening, ageInTicks, 1f);
+        this.animate(entity.preparingSleepState, TangoAnimations.preparing_to_sleep, ageInTicks, 1f);
+        this.animate(entity.sleepState, TangoAnimations.sleep, ageInTicks, 1f);
+        this.animate(entity.awakeningState, TangoAnimations.awakening, ageInTicks, 1f);
 
         // Basic Animations
-        this.animate(entity.getDeathAnimationState(), ModAnimationDefinitions.TangofteroAnimation.death, ageInTicks, 1f);
-        this.animate(entity.getSprintAnimationState(), ModAnimationDefinitions.TangofteroAnimation.sprint, ageInTicks, 1f);
-        this.animate(entity.getWalkAnimationState(), ModAnimationDefinitions.TangofteroAnimation.walk, ageInTicks, 1f);
-        this.animate(entity.getIdleAnimationState(), ModAnimationDefinitions.TangofteroAnimation.idle, ageInTicks, 1f);
+        this.animate(entity.getDeathAnimationState(), TangoAnimations.death, ageInTicks, 1f);
+        this.animate(entity.getSprintAnimationState(), TangoAnimations.sprint, ageInTicks, 1f);
+        this.animate(entity.getWalkAnimationState(), TangoAnimations.walk, ageInTicks, 1f);
+        this.animate(entity.getIdleAnimationState(), TangoAnimations.idle, ageInTicks, 1f);
+        this.animate(entity.getWaterIdleAnimationState(), TangoAnimations.swim, ageInTicks, 1f);
 
         // Independent Animations
-        this.animate(entity.attackAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
-        this.animate(entity.biteAnimationState, ModAnimationDefinitions.TangofteroAnimation.bite, ageInTicks, 1f);
-        this.animate(entity.roarAnimationState, ModAnimationDefinitions.TangofteroAnimation.roar, ageInTicks, 1f);
+        this.animate(entity.attackAnimationState, TangoAnimations.attack, ageInTicks, 1f);
+        this.animate(entity.biteAnimationState, TangoAnimations.bite, ageInTicks, 1f);
+        this.animate(entity.roarAnimationState, TangoAnimations.roar, ageInTicks, 1f);
 
     }
 
