@@ -146,6 +146,8 @@ public class SalmonModel<T extends SalmonEntity> extends HierarchicalModel<T> {
 
         // Independent Animations
         this.animate(entity.attackAnimationState, SalmonAnimations.bite, ageInTicks, 1f);
+
+        this.animate(entity.digTargetAnimationState, SalmonAnimations.sniff, ageInTicks, 1f);
     }
 
     @Override

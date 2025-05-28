@@ -17,7 +17,11 @@ public class SalmonRenderer extends MobRenderer<SalmonEntity, SalmonModel<Salmon
 
     @Override
     public ResourceLocation getTextureLocation(SalmonEntity salmonEntity) {
-        return new ResourceLocation(SMOP.MOD_ID, "textures/entity/salmon/salmon_male.png");
+        if (salmonEntity.isMale()) {
+            return new ResourceLocation(SMOP.MOD_ID, "textures/entity/salmon/salmon_male.png");
+        } else {
+            return new ResourceLocation(SMOP.MOD_ID, "textures/entity/salmon/salmon_female.png");
+        }
     }
 
     @Override

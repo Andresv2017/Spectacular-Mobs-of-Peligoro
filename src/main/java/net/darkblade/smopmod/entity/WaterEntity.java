@@ -20,6 +20,7 @@ public abstract class WaterEntity extends GenderedEntity {
 
     public WaterEntity(EntityType<? extends WaterEntity> type, Level level) {
         super(type, level);
+        this.getNavigation().setCanFloat(true);
         this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.02F, 0.01F, true);
         this.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
     }
@@ -59,7 +60,6 @@ public abstract class WaterEntity extends GenderedEntity {
 
         if (this.level().isClientSide()) {
             updateAquaticAnimations();
-            logActiveWaterAnimation();
         }
 
         if (!this.level().isClientSide()) {
@@ -176,22 +176,6 @@ public abstract class WaterEntity extends GenderedEntity {
         if (active != swimSprintAnimationState) swimSprintAnimationState.stop();
         if (active != floopingAnimationState) floopingAnimationState.stop();
         if (active != waterDeathAnimationState) waterDeathAnimationState.stop();
-    }
-
-    protected void logActiveWaterAnimation() {
-        if (swimAnimationState.isStarted()) {
-            System.out.println("[ANIM] swim");
-        } else if (swimSprintAnimationState.isStarted()) {
-            System.out.println("[ANIM] swim_sprint");
-        } else if (floopingAnimationState.isStarted()) {
-            System.out.println("[ANIM] flooping");
-        } else if (waterDeathAnimationState.isStarted()) {
-            System.out.println("[ANIM] water_death");
-        } else if (waterIdleAnimationState.isStarted()) {
-            System.out.println("[ANIM] water_idle");
-        } else {
-            System.out.println("[ANIM] ninguna activa");
-        }
     }
 
     @Override

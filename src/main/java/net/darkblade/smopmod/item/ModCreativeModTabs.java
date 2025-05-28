@@ -17,15 +17,22 @@ public class ModCreativeModTabs {
             () -> CreativeModeTab.builder().icon(() -> new ItemStack(ModItems.HELL_HIPPO_COOKED_MEAT.get()))
                     .title(Component.translatable("creativetab.smop_tab"))
                     .displayItems((pParameters, pOutput) -> {
+                        // ────────────────────────── FOOD ─────
                         pOutput.accept(ModItems.HELL_HIPPO_COOKED_MEAT.get());
                         pOutput.accept(ModItems.HELL_HIPPO_RAW_MEAT.get());
+                        pOutput.accept(ModItems.RAW_SALMON.get());
+                        // ────────────────────────── SPAWN EGGS ─────
                         pOutput.accept(ModItems.HELL_HIPPO_SPAWN_EGG.get());
                         pOutput.accept(ModItems.TANGOFTERO_SPAWN_EGG.get());
-                        pOutput.accept(ModItems.HELHIPPO_ARMOR.get());
-                        pOutput.accept(ModItems.TANGOFTERO_EGG_ITEM.get());
-                        pOutput.accept(ModItems.KRIFTO_EGG_ITEM.get());
                         pOutput.accept(ModItems.KRIFTOGNATHUS_SPAWN_EGG.get());
                         pOutput.accept(ModItems.SALMON_SPAWN_EGG.get());
+                        // ────────────────────────── ARMOR ─────
+                        pOutput.accept(ModItems.HELHIPPO_ARMOR.get());
+                        // ────────────────────────── EGGS BLOCKS ─────
+                        pOutput.accept(ModItems.TANGOFTERO_EGG_ITEM.get());
+                        pOutput.accept(ModItems.KRIFTO_EGG_ITEM.get());
+
+
 
                     })
                     .build());

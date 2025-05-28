@@ -6,11 +6,14 @@ import net.darkblade.smopmod.entity.ModEntities;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.HorseArmorItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraftforge.common.ForgeSpawnEggItem;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+
+import java.util.List;
 
 public class ModItems {
     public static final DeferredRegister<Item> ITEMS =
@@ -22,6 +25,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> HELL_HIPPO_RAW_MEAT = ITEMS.register("hell_hippo_raw_meat",
             () -> new Item(new Item.Properties().food(ModFoods.HELL_HIPPO_RAW_MEAT)));
+
+    public static final RegistryObject<Item> RAW_SALMON = ITEMS.register("raw_salmon",
+            () -> new Item(new Item.Properties().food(ModFoods.RAW_SALMON)));
 
     // ───────────────────────────────────────────────────── SPAWN EGGS ─────
 
@@ -49,6 +55,13 @@ public class ModItems {
 
     public static final RegistryObject<Item> KRIFTO_EGG_ITEM = ITEMS.register("krifto_egg",
             () -> new BlockItem(ModBlocks.KRIFFO_EGG.get(), new Item.Properties()));
+
+    // ───────────────────────────────────────────────────── LIST DROPS─────
+
+    public static final List<Item> SAND_DROPS = List.of(Items.STICK, Items.SANDSTONE);
+    public static final List<Item> GRAVEL_DROPS = List.of(Items.FLINT);
+    public static final List<Item> MUD_DROPS = List.of(Items.CLAY_BALL);
+    public static final List<Item> DIRT_DROPS = List.of(Items.POTATO, Items.CARROT);
 
 
     public static void register(IEventBus eventBus) {

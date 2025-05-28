@@ -190,11 +190,9 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
-        if (item.isEdible() && this.biteAnimationCooldown <= 0) {
-            if (item.isEdible() && this.biteAnimationCooldown <= 0) {
-                handleFeeding(item, player);
-                return InteractionResult.sidedSuccess(this.level().isClientSide());
-            }
+        if (item.isEdible() && this.biteAnimationCooldown <= 0 && isTame()) {
+            handleFeeding(item, player);
+            return InteractionResult.sidedSuccess(this.level().isClientSide());
         }
         return super.mobInteract(player, hand);
     }
@@ -328,7 +326,6 @@ public class TangofteroEntity extends BaseEntity implements ISleepThreatEvaluato
         }
         this.biteAnimationCooldown = 20;
         this.level().broadcastEntityEvent(this, (byte) 42);
-        this.level().broadcastEntityEvent(this, (byte) 7);
         if (isRottenFlesh && this.isTame() && this.tickCount - this.lastRoarTime >= ROAR_COOLDOWN_TICKS) {
             this.roarDelayTicks = 15;
             this.shouldRoar = true;

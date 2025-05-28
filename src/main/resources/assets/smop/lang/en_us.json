@@ -1,15 +1,25 @@
 {
   "item.smop.hell_hippo_cooked_meat": "Hell Hippo Cooked Meat",
   "item.smop.hell_hippo_raw_meat": "Hell Hippo Raw Meat",
+  "item.smop.raw_salmon": "Raw Salmon",
+
   "item.smop.hell_hippo_spawn_egg": "Hell Hippo Spawn Egg",
   "item.smop.tangoftero_spawn_egg": "Tangoftero Spawn Egg",
   "item.smop.kriftognathus_spawn_egg": "Kriftognathus Spawn Egg",
   "item.smop.salmon_spawn_egg": "Salmon Spawn Egg",
+
   "item.smop.hellhippo_armor": "Hell Hippo Armor",
+
   "block.smop.tangoftero_egg": "Tangoftero Egg",
   "item.smop.tangoftero_egg": "Tangoftero Egg",
+
+  "block.smop.krifto_egg": "Krifto Egg",
+  "item.smop.krifto_egg": "Krifto Egg",
+
   "creativetab.smop_tab": "Spectacular Mobs Of Peligoro",
+
   "effect.smop.fear": "Fear",
+
   "entity.smop.hell_hippo": "Hell Hippo",
   "entity.smop.tangoftero" : "Tangoftero"
 }
