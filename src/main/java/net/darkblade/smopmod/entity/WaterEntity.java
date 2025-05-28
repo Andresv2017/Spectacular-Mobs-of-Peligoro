@@ -21,7 +21,7 @@ public abstract class WaterEntity extends GenderedEntity {
     public WaterEntity(EntityType<? extends WaterEntity> type, Level level) {
         super(type, level);
         this.getNavigation().setCanFloat(true);
-        this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.02F, 0.01F, true);
+        this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.02F, 0.01F, false);
         this.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
     }
 

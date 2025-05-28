@@ -57,7 +57,7 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
 
         this.goalSelector.addGoal(1, new SalmonAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(2, new SalmonDigGoal(this, 1.0D));
-        this.goalSelector.addGoal(3, new RandomSwimmingGoal(this, 1.0D, 40));
+        this.goalSelector.addGoal(5, new RandomSwimmingGoal(this, 1.0D, 40));
 
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
@@ -176,15 +176,21 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
         System.out.println("[SALMON] setDigCommand(" + value + ")");
     }
 
-    public static final byte DIG_TARGET_EVENT_ID = 44;
-    public final AnimationState digTargetAnimationState = new AnimationState();
+    public static final byte SNIFF_TARGET_EVENT_ID = 44;
+    public final AnimationState sniffAnimationState = new AnimationState();
+
+    public static final byte DIG_EVENT_ID = 45; // Usa un ID libre (no igual a otros eventos)
+    public final AnimationState digAnimationState = new AnimationState();
 
 
     @Override
     public void handleEntityEvent(byte id) {
-        if (id == DIG_TARGET_EVENT_ID) {
-            this.digTargetAnimationState.start(this.tickCount);
+        if (id == SNIFF_TARGET_EVENT_ID) {
+            this.sniffAnimationState.start(this.tickCount);
             System.out.println("[ANIM] Animación 'dig_target' activada desde evento de red.");
+        } else if (id == DIG_EVENT_ID) {
+            this.digAnimationState.start(this.tickCount);
+            System.out.println("[ANIM] Animación 'dig' activada desde evento de red.");
         } else {
             super.handleEntityEvent(id);
         }

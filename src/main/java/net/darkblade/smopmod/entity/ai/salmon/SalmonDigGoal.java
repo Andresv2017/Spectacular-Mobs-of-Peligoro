@@ -26,8 +26,8 @@ public class SalmonDigGoal extends Goal {
     private BlockPos targetBlock = null;
     private BlockPos failedTargetBlock = null;
     private int tryTicks;
-    private int digTargetAnimCooldown = 0;
     private int movementPauseCooldown = 0; // ⏸ nuevo: pausa entre tramos
+    private int excavationTicks = -1; //
 
     public SalmonDigGoal(SalmonEntity salmon, double speed) {
         this.salmon = salmon;
@@ -85,14 +85,16 @@ public class SalmonDigGoal extends Goal {
                     speed
             );
             System.out.println("[AQUAGOAL] moveTo iniciado → " + success);
+
             if (!success) {
                 System.out.println("[AQUAGOAL] Navegación fallida. Cancelando objetivo.");
                 failedTargetBlock = targetBlock;
                 salmon.setDigCommand(false);
                 targetBlock = null;
             } else {
-                // 🎬 Reproducir animación una vez
-                salmon.level().broadcastEntityEvent(salmon, SalmonEntity.DIG_TARGET_EVENT_ID);
+                // 🎬 Animación de "olfatear" el objetivo (solo visual)
+                salmon.level().broadcastEntityEvent(salmon, SalmonEntity.SNIFF_TARGET_EVENT_ID);
+                System.out.println("[ANIM] Animación 'sniff_target' enviada.");
             }
         }
     }
@@ -114,6 +116,32 @@ public class SalmonDigGoal extends Goal {
             return;
         }
 
+        if (excavationTicks >= 0) {
+            excavationTicks++;
+            if (excavationTicks == 1) {
+                // Activa animación al comenzar a excavar
+                salmon.level().broadcastEntityEvent(salmon, SalmonEntity.DIG_EVENT_ID);
+                System.out.println("[AQUAGOAL] Excavación iniciada con animación.");
+            } else if (excavationTicks >= 35) {
+                // Finaliza excavación
+                Block block = salmon.level().getBlockState(targetBlock).getBlock();
+                ItemStack drop = getDropForBlock(block);
+
+                if (!drop.isEmpty()) {
+                    salmon.spawnAtLocation(drop);
+                    System.out.println("[AQUAGOAL] Drop generado: " + drop.getItem());
+                }
+
+                salmon.level().destroyBlock(targetBlock, false);
+                System.out.println("[AQUAGOAL] Bloque destruido: " + targetBlock);
+
+                salmon.setDigCommand(false);
+                targetBlock = null;
+                excavationTicks = -1;
+            }
+            return;
+        }
+
         if (tryTicks % 40 == 0) { // cada 2 segundos intenta moverse
             boolean success = salmon.getNavigation().moveTo(
                     targetBlock.getX() + 0.5,
@@ -124,16 +152,9 @@ public class SalmonDigGoal extends Goal {
             movementPauseCooldown = 20; // pausa de 1 segundo
         }
 
-        // 🎯 Excavación al llegar
-        if (targetBlock != null && salmon.blockPosition().closerThan(targetBlock, 2.0)) {
-            Block block = salmon.level().getBlockState(targetBlock).getBlock();
-            ItemStack drop = getDropForBlock(block);
-
-            if (!drop.isEmpty()) salmon.spawnAtLocation(drop);
-            salmon.level().destroyBlock(targetBlock, false);
-
-            salmon.setDigCommand(false);
-            targetBlock = null;
+        // 🎯 Inicia excavación si está cerca
+        if (targetBlock != null && salmon.blockPosition().closerThan(targetBlock, 2.0) && excavationTicks == -1) {
+            excavationTicks = 0; // activa cuenta regresiva de excavación
         }
     }
 
