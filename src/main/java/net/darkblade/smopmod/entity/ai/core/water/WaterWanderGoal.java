@@ -1,6 +1,7 @@
 package net.darkblade.smopmod.entity.ai.core.water;
 
 import net.darkblade.smopmod.entity.WaterEntity;
+import net.darkblade.smopmod.entity.custom.SalmonEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
@@ -29,16 +30,24 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
 
     @Override
     public boolean canUse() {
+        // 🛑 Cancelar wander si el salmón quiere excavar
+        if (entity instanceof SalmonEntity salmon && salmon.wantsToDig()) {
+            return false;
+        }
+
+        // ⏳ Verifica si está en modo STANDING y aún no terminó el tiempo
         if (entity.getRandom().nextInt(100) != 0 && entity.isStanding() && entity.timeStanding < entity.navigateTypeLength) {
             return false;
         }
 
+        // 🧠 Decide si quiere quedarse quieto
         if (entity.isStanding()) {
             this.wantsToStand = false;
         } else {
             this.wantsToStand = entity.timeSwimming > 300 || entity.getRandom().nextFloat() < 0.2F;
         }
 
+        // 🎯 Intenta encontrar una posición de destino
         Vec3 target = this.getPosition();
         if (target == null) {
             System.out.println("[WANDER] No se encontró posición válida.");
@@ -50,6 +59,7 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
         this.z = target.z;
         return true;
     }
+
 
     @Override
     public void start() {

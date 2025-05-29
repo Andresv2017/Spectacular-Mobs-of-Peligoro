@@ -8,7 +8,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.level.Level;
@@ -176,16 +175,6 @@ public abstract class WaterEntity extends GenderedEntity {
     public AnimationState getWaterDeathAnimationState() {return waterDeathAnimationState;}
     public AnimationState getLandDeathAnimationState() {return landDeathAnimationState;}
 
-    protected void updateWaterSprintStatus() {
-        boolean isChasing = this.getTarget() != null && this.getTarget().isAlive();
-        this.setSprinting(isChasing);
-
-        double baseSpeed = this.getAttributeValue(Attributes.MOVEMENT_SPEED);
-        double sprintSpeed = this.getAttributeValue(Attributes.ATTACK_SPEED);
-
-        this.getAttribute(Attributes.MOVEMENT_SPEED)
-                .setBaseValue(this.isSprinting() ? sprintSpeed : baseSpeed);
-    }
 
     private boolean hasPlayedWaterDeath = false;
 
@@ -242,7 +231,6 @@ public abstract class WaterEntity extends GenderedEntity {
     public void updateAnimations() {
         updateAquaticAnimations();
     }
-
 
     public int getOutOfWaterMaxTicks() {
         return outOfWaterMaxTicks;

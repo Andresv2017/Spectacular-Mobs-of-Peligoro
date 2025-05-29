@@ -55,9 +55,12 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
     @Override
     protected void registerGoals() {
 
-        this.goalSelector.addGoal(0, new WaterWanderGoal<>(this));
+
         this.goalSelector.addGoal(1, new SalmonAttackGoal(this, 1.0D, true));
-        this.goalSelector.addGoal(3, new SalmonDigGoal(this, 1.0D));
+        this.goalSelector.addGoal(2, new SalmonDigGoal(this, 1.0D));
+        this.goalSelector.addGoal(5, new WaterWanderGoal<>(this));
+
+
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
     }
 
