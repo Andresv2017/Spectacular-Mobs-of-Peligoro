@@ -84,17 +84,17 @@ public class SalmonDigGoal extends Goal {
                     targetBlock.getZ() + 0.5,
                     speed
             );
-            System.out.println("[AQUAGOAL] moveTo iniciado → " + success);
+            //System.out.println("[AQUAGOAL] moveTo iniciado → " + success);
 
             if (!success) {
-                System.out.println("[AQUAGOAL] Navegación fallida. Cancelando objetivo.");
+                //System.out.println("[AQUAGOAL] Navegación fallida. Cancelando objetivo.");
                 failedTargetBlock = targetBlock;
                 salmon.setDigCommand(false);
                 targetBlock = null;
             } else {
                 // 🎬 Animación de "olfatear" el objetivo (solo visual)
                 salmon.level().broadcastEntityEvent(salmon, SalmonEntity.SNIFF_TARGET_EVENT_ID);
-                System.out.println("[ANIM] Animación 'sniff_target' enviada.");
+                //System.out.println("[ANIM] Animación 'sniff_target' enviada.");
             }
         }
     }
@@ -121,7 +121,7 @@ public class SalmonDigGoal extends Goal {
             if (excavationTicks == 1) {
                 // Activa animación al comenzar a excavar
                 salmon.level().broadcastEntityEvent(salmon, SalmonEntity.DIG_EVENT_ID);
-                System.out.println("[AQUAGOAL] Excavación iniciada con animación.");
+                //System.out.println("[AQUAGOAL] Excavación iniciada con animación.");
             } else if (excavationTicks >= 35) {
                 // Finaliza excavación
                 Block block = salmon.level().getBlockState(targetBlock).getBlock();
@@ -129,11 +129,11 @@ public class SalmonDigGoal extends Goal {
 
                 if (!drop.isEmpty()) {
                     salmon.spawnAtLocation(drop);
-                    System.out.println("[AQUAGOAL] Drop generado: " + drop.getItem());
+                    //System.out.println("[AQUAGOAL] Drop generado: " + drop.getItem());
                 }
 
                 salmon.level().destroyBlock(targetBlock, false);
-                System.out.println("[AQUAGOAL] Bloque destruido: " + targetBlock);
+                //System.out.println("[AQUAGOAL] Bloque destruido: " + targetBlock);
 
                 salmon.setDigCommand(false);
                 targetBlock = null;
