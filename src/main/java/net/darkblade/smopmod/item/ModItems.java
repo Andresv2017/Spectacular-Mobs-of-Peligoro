@@ -56,6 +56,9 @@ public class ModItems {
     public static final RegistryObject<Item> KRIFTO_EGG_ITEM = ITEMS.register("krifto_egg",
             () -> new BlockItem(ModBlocks.KRIFFO_EGG.get(), new Item.Properties()));
 
+    public static final RegistryObject<Item> SALMON_ROE_EGGS_ITEM = ITEMS.register("salmon_roe_eggs.json",
+            () -> new BlockItem(ModBlocks.SALMON_ROE_EGGS.get(), new Item.Properties()));
+
     // ───────────────────────────────────────────────────── LIST DROPS─────
 
     public static final List<Item> SAND_DROPS = List.of(Items.STICK, Items.SANDSTONE);

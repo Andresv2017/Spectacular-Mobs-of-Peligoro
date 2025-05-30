@@ -109,14 +109,25 @@ public class SMOP
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event)
         {
+            //ENTITIES
+
             EntityRenderers.register(ModEntities.HELL_HIPPO.get(), Hell_HippoRenderer::new);
             EntityRenderers.register(ModEntities.TANGOFTERO.get(), TangofteroRender::new);
             EntityRenderers.register(ModEntities.KIFTO.get(), KriftognathusRender::new);
             EntityRenderers.register(ModEntities.NIRAS.get(), NirasmosaurusRender::new);
             EntityRenderers.register(ModEntities.SALMON.get(), SalmonRenderer::new);
+
+            //EGGS
+
+            event.enqueueWork(() -> {
+                ItemBlockRenderTypes.setRenderLayer(ModBlocks.SALMON_ROE_EGGS.get(), RenderType.translucent());
+            });
+
+
             event.enqueueWork(() -> {
                 ItemBlockRenderTypes.setRenderLayer(ModBlocks.TANGOFTERO_EGG.get(), RenderType.cutout());
             });
+
             event.enqueueWork(() -> {
                 ItemBlockRenderTypes.setRenderLayer(ModBlocks.KRIFFO_EGG.get(), RenderType.cutout());
             });

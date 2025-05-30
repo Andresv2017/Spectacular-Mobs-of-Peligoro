@@ -29,7 +29,7 @@ public class SalmonRenderer extends MobRenderer<SalmonEntity, SalmonModel<Salmon
                        MultiBufferSource pBuffer, int pPackedLight) {
 
         if(pEntity.isBaby()) {
-            pMatrixStack.scale(0.5f, 0.5f, 0.5f);
+            pMatrixStack.scale(0.3f, 0.3f, 0.3f);
         }
 
         super.render(pEntity, pEntityYaw, pPartialTicks, pMatrixStack, pBuffer, pPackedLight);

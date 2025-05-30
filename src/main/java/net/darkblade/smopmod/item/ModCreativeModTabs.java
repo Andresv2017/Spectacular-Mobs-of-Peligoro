@@ -31,6 +31,7 @@ public class ModCreativeModTabs {
                         // ────────────────────────── EGGS BLOCKS ─────
                         pOutput.accept(ModItems.TANGOFTERO_EGG_ITEM.get());
                         pOutput.accept(ModItems.KRIFTO_EGG_ITEM.get());
+                        pOutput.accept(ModItems.SALMON_ROE_EGGS_ITEM.get());
 
 
 
