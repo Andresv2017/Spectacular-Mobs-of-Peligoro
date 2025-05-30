@@ -2,9 +2,12 @@ package net.darkblade.smopmod.entity.custom;
 
 import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.entity.BaseEntity;
+import net.darkblade.smopmod.entity.FlyingEntity;
 import net.darkblade.smopmod.entity.GenderedEntity;
 import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericLayEggGoal;
+import net.darkblade.smopmod.entity.ai.core.flying.FlyFromNowAndThenGoal;
+import net.darkblade.smopmod.entity.ai.core.flying.RandomStrollAndFlightGoal;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectOwnEggGoal;
@@ -49,7 +52,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Set;
 import java.util.function.Predicate;
 
-public class KriftognathusEntity extends GenderedEntity implements ISleepThreatEvaluator, ISleepAwareness, CustomEggBorn {
+public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEvaluator, ISleepAwareness, CustomEggBorn {
 
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<String> SPAWN_BIOME = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.STRING);
@@ -104,6 +107,8 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
 
         this.goalSelector.addGoal(1, new KriftoAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(2, new GenericBreedGoal<>(this, 1.0));
+        this.goalSelector.addGoal(3, new RandomStrollAndFlightGoal(this, 1.0));
+        this.goalSelector.addGoal(4, new FlyFromNowAndThenGoal(this));
         EggGoalRegistry.registerWithOwnGoal(
                 this,
                 ModBlocks.KRIFFO_EGG, // El bloque de huevo
@@ -111,11 +116,11 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
                 true, true, // attackOnApproach, attackOnBreak
                 ProtectEggBaseGoal.EggBreakReaction.IGNORE, // No huye si lo rompen
                 PREY_SELECTOR,
-                4// Prioridad base del goal
+                5// Prioridad base del goal
         );
-        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
     }
@@ -125,6 +130,7 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
                 .add(Attributes.MAX_HEALTH, 10.0)
                 .add(Attributes.FOLLOW_RANGE, 28.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.20D)
+                .add(Attributes.FLYING_SPEED, 0.25D)
                 .add(Attributes.ATTACK_SPEED, 0.4D)
                 .add(Attributes.ATTACK_KNOCKBACK, 0.1F)
                 .add(Attributes.ATTACK_DAMAGE, 2.0F);
@@ -321,5 +327,10 @@ public class KriftognathusEntity extends GenderedEntity implements ISleepThreatE
 
         // (Optional) Debug message
         System.out.println("[BiomeTexture] Asignado: " + biomePath + " para entidad ID: " + this.getId());
+    }
+
+    @Override
+    protected int switchNavigationInterval() {
+        return 240; // por ejemplo, cambia cada 12 segundos
     }
 }
