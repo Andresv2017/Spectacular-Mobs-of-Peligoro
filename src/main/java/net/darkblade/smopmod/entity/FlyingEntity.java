@@ -91,19 +91,27 @@ public class FlyingEntity extends GenderedEntity{
     }
 
 
+    // ===== MÉTODO PARA DETECTAR CONTACTO CON EL SUELO =====
+
     protected boolean isTouchingSolidGround() {
         BlockPos pos = this.blockPosition().below();
         return !this.level().getBlockState(pos).isAir() && this.getDeltaMovement().y <= 0;
     }
 
-    // Personalizable por entidad
-    protected int switchNavigationInterval() {
-        return 100; // default, override in entity
+    // ===== CONFIGURABLE POR ENTIDAD FINAL =====
+
+    protected int maxGroundTicks() {
+        return 80; // tiempo en tierra antes de despegar
     }
 
-    private int ticksSinceLastSwitch = 0;
-    private int groundedWhileFlyingTicks = 0;
+    protected int maxGroundedTicksWhileFlying() {
+        return 10; // ticks tocando el suelo antes de forzar aterrizaje
+    }
 
+    // ===== ESTADO INTERNO =====
+
+    private int groundTicks = 0;
+    private int groundedWhileFlyingTicks = 0;
     private boolean prevTouchingGround = false;
 
     @Override
@@ -111,54 +119,63 @@ public class FlyingEntity extends GenderedEntity{
         super.tick();
 
         if (!level().isClientSide()) {
-            ticksSinceLastSwitch++;
+            boolean isFlying = getIsFlying();
+            boolean isTouching = isTouchingSolidGround();
 
-            // 1. Alternancia automática por intervalo
-            if (ticksSinceLastSwitch >= switchNavigationInterval()) {
-                System.out.println("[NAV] Intervalo alcanzado: " + ticksSinceLastSwitch + " ticks. Alternando navegación.");
-                switchNavigation();
-                ticksSinceLastSwitch = 0;
-            }
+            // --- CONTROL DE NAVEGACIÓN ---
+            if (isFlying) {
+                groundTicks = 0;
 
-            // 2. Aterrizaje forzado si permanece en el suelo
-            if (getIsFlying()) {
-                if (isTouchingSolidGround()) {
+                if (isTouching) {
                     groundedWhileFlyingTicks++;
                     System.out.println("[NAV] Tocando suelo mientras vuela: " + groundedWhileFlyingTicks + " ticks.");
 
-                    if (groundedWhileFlyingTicks >= 10) {
-                        System.out.println("[NAV] Fuerza aterrizaje tras 10 ticks en el suelo durante vuelo.");
+                    if (groundedWhileFlyingTicks >= maxGroundedTicksWhileFlying()) {
+                        System.out.println("[NAV] Fuerza aterrizaje tras " + groundedWhileFlyingTicks + " ticks en el suelo.");
                         switchNavigation();
-                        groundedWhileFlyingTicks = 0;
-                        ticksSinceLastSwitch = 0;
+                        resetTimers();
+                        return;
                     }
-
                 } else {
-                    if (groundedWhileFlyingTicks > 0) {
+                    if (groundedWhileFlyingTicks > 0)
                         System.out.println("[NAV] Dejó de tocar el suelo. Reiniciando contador de aterrizaje forzado.");
-                    }
                     groundedWhileFlyingTicks = 0;
+                }
+
+            } else {
+                groundedWhileFlyingTicks = 0;
+                groundTicks++;
+
+                if (groundTicks >= maxGroundTicks()) {
+                    System.out.println("[NAV] Ha caminado " + groundTicks + " ticks. Cambiando a navegación aérea.");
+                    switchNavigation();
+                    resetTimers();
+                    return;
+                }
+            }
+
+            // --- PARTÍCULAS DEBUG DE SUELO ---
+            if (isTouching != prevTouchingGround) {
+                prevTouchingGround = isTouching;
+
+                if (isTouching) {
+                    System.out.println("[PARTICLE DEBUG] Tocando suelo: " + this.blockPosition());
+
+                    ((ServerLevel) level()).sendParticles(
+                            ParticleTypes.HEART,
+                            getX(), getY(), getZ(),
+                            5, 0, 0, 0, 0.01
+                    );
                 }
             }
         }
+    }
 
-        boolean currentTouching = isTouchingSolidGround();
+// ===== MÉTODO AUXILIAR PARA LIMPIAR CONTADORES =====
 
-        if (currentTouching != prevTouchingGround) {
-            prevTouchingGround = currentTouching;
-
-            if (currentTouching && !level().isClientSide()) {
-                System.out.println("[PARTICLE DEBUG] Tocando suelo: " + this.blockPosition());
-
-                ((ServerLevel) level()).sendParticles(
-                        ParticleTypes.HEART,   // tipo
-                        getX(), getY(), getZ(), // posición
-                        5,                     // cantidad
-                        0, 0, 0,               // offsets (X, Y, Z)
-                        0.01                   // velocidad
-                );
-            }
-        }
+    private void resetTimers() {
+        groundTicks = 0;
+        groundedWhileFlyingTicks = 0;
     }
 
 

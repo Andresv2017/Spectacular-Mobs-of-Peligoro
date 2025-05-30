@@ -328,9 +328,4 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
         // (Optional) Debug message
         System.out.println("[BiomeTexture] Asignado: " + biomePath + " para entidad ID: " + this.getId());
     }
-
-    @Override
-    protected int switchNavigationInterval() {
-        return 240; // por ejemplo, cambia cada 12 segundos
-    }
 }
