@@ -1,7 +1,7 @@
 package net.darkblade.smopmod.entity;
 
-import net.darkblade.smopmod.entity.navigation.TBFlyingPathNavigation;
-import net.darkblade.smopmod.entity.navigation.TBGroundPathNavigation;
+import net.darkblade.smopmod.entity.navigation.FlyingPathNavigation;
+import net.darkblade.smopmod.entity.navigation.GroundPathNavigation;
 import net.darkblade.smopmod.packet.InitPackets;
 import net.darkblade.smopmod.packet.StoCSyncFlying;
 import net.minecraft.core.BlockPos;
@@ -43,7 +43,7 @@ public class FlyingEntity extends GenderedEntity{
         this.setPathfindingMalus(BlockPathTypes.LAVA, -8f);
 
         this.moveControl = new MoveControl(this);
-        this.navigation = new TBGroundPathNavigation(this, this.level());
+        this.navigation = new GroundPathNavigation(this, this.level());
     }
 
     @Override
@@ -72,11 +72,11 @@ public class FlyingEntity extends GenderedEntity{
 
         if (moveControl instanceof FlyingMoveControl) {
             this.moveControl = new MoveControl(this);
-            this.navigation = new TBGroundPathNavigation(this, this.level());
+            this.navigation = new GroundPathNavigation(this, this.level());
             this.setIsFlying(false);
         } else {
             this.moveControl = new FlyingMoveControl(this, 20, false);
-            this.navigation = new TBFlyingPathNavigation(this, this.level()).canFloat(true);
+            this.navigation = new FlyingPathNavigation(this, this.level()).canFloat(true);
             this.jumpControl.jump();
             this.setIsFlying(true);
         }
@@ -171,13 +171,12 @@ public class FlyingEntity extends GenderedEntity{
         }
     }
 
-// ===== MÉTODO AUXILIAR PARA LIMPIAR CONTADORES =====
+    // ===== MÉTODO AUXILIAR PARA LIMPIAR CONTADORES =====
 
     private void resetTimers() {
         groundTicks = 0;
         groundedWhileFlyingTicks = 0;
     }
-
 
 
     @Override

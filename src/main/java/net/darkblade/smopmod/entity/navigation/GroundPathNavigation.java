@@ -2,18 +2,17 @@ package net.darkblade.smopmod.entity.navigation;
 
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-public class TBGroundPathNavigation extends GroundPathNavigation {
+public class GroundPathNavigation extends net.minecraft.world.entity.ai.navigation.GroundPathNavigation {
     private float distancemodifier = 0.75F;
 
-    public TBGroundPathNavigation(Mob entitylivingIn, Level worldIn) {
+    public GroundPathNavigation(Mob entitylivingIn, Level worldIn) {
         super(entitylivingIn, worldIn);
     }
 
-    public TBGroundPathNavigation(Mob entitylivingIn, Level worldIn, float distancemodifier) {
+    public GroundPathNavigation(Mob entitylivingIn, Level worldIn, float distancemodifier) {
         super(entitylivingIn, worldIn);
         this.distancemodifier = distancemodifier;
     }

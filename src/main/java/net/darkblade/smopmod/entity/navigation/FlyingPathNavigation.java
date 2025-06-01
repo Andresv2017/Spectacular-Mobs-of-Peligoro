@@ -3,14 +3,13 @@ package net.darkblade.smopmod.entity.navigation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-public class TBFlyingPathNavigation extends FlyingPathNavigation {
+public class FlyingPathNavigation extends net.minecraft.world.entity.ai.navigation.FlyingPathNavigation {
     private float distancemodifier = 1.5F;
 
-    public TBFlyingPathNavigation(Mob p_26424_, Level p_26425_) {
+    public FlyingPathNavigation(Mob p_26424_, Level p_26425_) {
         super(p_26424_, p_26425_);
     }
 
@@ -53,7 +52,7 @@ public class TBFlyingPathNavigation extends FlyingPathNavigation {
         }
     }
 
-    public TBFlyingPathNavigation canFloat(boolean canFloat) {
+    public FlyingPathNavigation canFloat(boolean canFloat) {
         this.setCanFloat(canFloat);
         return this;
     }
