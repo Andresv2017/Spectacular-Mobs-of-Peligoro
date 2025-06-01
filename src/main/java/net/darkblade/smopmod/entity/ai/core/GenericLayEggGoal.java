@@ -1,6 +1,7 @@
 package net.darkblade.smopmod.entity.ai.core;
 
 import net.darkblade.smopmod.entity.BaseEntity;
+import net.darkblade.smopmod.entity.WaterEntity;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectOwnEggGoal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -33,7 +34,15 @@ public class GenericLayEggGoal<T extends BaseEntity> extends Goal {
 
     @Override
     public boolean canUse() {
-        return entity.hasEgg() && !entity.isMammal() && entity.onGround();
+        if (!entity.hasEgg() || entity.isMammal()) return false;
+
+        // ✅ Si es una entidad acuática, no requiere estar onGround
+        if (entity instanceof WaterEntity) {
+            return true;
+        }
+
+        // ✅ Para las demás, requerimos que esté en el suelo
+        return entity.onGround();
     }
 
     @Override

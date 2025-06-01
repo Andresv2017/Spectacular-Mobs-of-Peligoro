@@ -1,7 +1,11 @@
 package net.darkblade.smopmod.entity.custom;
 
+import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.entity.BaseEntity;
 import net.darkblade.smopmod.entity.WaterEntity;
+import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
+import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
 import net.darkblade.smopmod.entity.ai.core.water.WaterWanderGoal;
 import net.darkblade.smopmod.entity.ai.salmon.SalmonAttackGoal;
 import net.darkblade.smopmod.entity.ai.salmon.SalmonDigGoal;
@@ -22,6 +26,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -30,6 +35,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, ISleepAwareness {
 
@@ -54,12 +60,27 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
                 .add(Attributes.ATTACK_DAMAGE, 1.0F);
     }
 
+    public static final Predicate<LivingEntity> PREY_SELECTOR = (p_289448_) -> {
+        EntityType<?> entitytype = p_289448_.getType();
+        return false;
+    };
+
     @Override
     protected void registerGoals() {
 
 
         this.goalSelector.addGoal(1, new SalmonAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(2, new SalmonDigGoal(this, 1.0D));
+        this.goalSelector.addGoal(3, new GenericBreedGoal<>(this, 1.0));
+        EggGoalRegistry.registerWithOwnGoal(
+                this,
+                ModBlocks.SALMON_ROE_EGGS, // El bloque de huevo
+                4, 6, // stayNearEggRadius, defenseRadius
+                false, false, // attackOnApproach, attackOnBreak
+                ProtectEggBaseGoal.EggBreakReaction.IGNORE, // No huye si lo rompen
+                PREY_SELECTOR,
+                4// Prioridad base del goal
+        );
         this.goalSelector.addGoal(5, new WaterWanderGoal<>(this));
 
 
@@ -80,8 +101,8 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
         }
         if (!this.getNavigation().isDone()) {
             Vec3 move = this.getDeltaMovement();
-            System.out.printf("[DEBUG] ΔMovimiento: %.3f %.3f %.3f | Velocidad: %.3f%n",
-                    move.x, move.y, move.z, move.length());
+            //System.out.printf("[DEBUG] ΔMovimiento: %.3f %.3f %.3f | Velocidad: %.3f%n",
+            //        move.x, move.y, move.z, move.length());
         }
 
     }
@@ -147,10 +168,12 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
     // ───────────────────────────────────────────────────── DIG GOAL ─────
 
     public int digCommandCooldown = 0; // este controla el reinicio del Goal
+    private static final Item BREEDING_ITEM = Items.COD;
 
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        Item item = stack.getItem();
 
         if (stack.getItem() == Items.PUFFERFISH) {
             if (this.digCommandCooldown > 0) {
@@ -165,6 +188,15 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
             return InteractionResult.SUCCESS;
         }
 
+        if (item == BREEDING_ITEM && !this.isBaby() && !this.isInLove()) {
+            if (!player.level().isClientSide) {
+                this.setInLove(player);
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
         return super.mobInteract(player, hand);
     }
 
@@ -192,10 +224,10 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
     public void handleEntityEvent(byte id) {
         if (id == SNIFF_TARGET_EVENT_ID) {
             this.sniffAnimationState.start(this.tickCount);
-            System.out.println("[ANIM] Animación 'dig_target' activada desde evento de red.");
+            //System.out.println("[ANIM] Animación 'dig_target' activada desde evento de red.");
         } else if (id == DIG_EVENT_ID) {
             this.digAnimationState.start(this.tickCount);
-            System.out.println("[ANIM] Animación 'dig' activada desde evento de red.");
+            //System.out.println("[ANIM] Animación 'dig' activada desde evento de red.");
         } else {
             super.handleEntityEvent(id);
         }
@@ -211,7 +243,7 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
             if (!SalmonEntity.this.isStanding()) {
                 if (this.operation == Operation.MOVE_TO && !SalmonEntity.this.getNavigation().isDone()) {
                     // Debug para confirmar que se ejecuta el tick de movimiento
-                    System.out.printf("[MOVE] tick() activo → destino: (%.2f, %.2f, %.2f)%n", wantedX, wantedY, wantedZ);
+                    //System.out.printf("[MOVE] tick() activo → destino: (%.2f, %.2f, %.2f)%n", wantedX, wantedY, wantedZ);
                     super.tick();
                     SalmonEntity.this.setSpeed(SWIM_SPEED_MODIFIER); // Garantiza que se aplique velocidad
                 } else {

@@ -50,7 +50,7 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
         // 🎯 Intenta encontrar una posición de destino
         Vec3 target = this.getPosition();
         if (target == null) {
-            System.out.println("[WANDER] No se encontró posición válida.");
+            //System.out.println("[WANDER] No se encontró posición válida.");
             return false;
         }
 
@@ -67,12 +67,13 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
 
         // 👇 1. Notifica al MoveControl
         entity.getMoveControl().setWantedPosition(this.x, this.y, this.z, 1.0);
-        System.out.printf("[DEBUG] setWantedPosition a (%.2f, %.2f, %.2f)%n", x, y, z);
+        //System.out.printf("[DEBUG] setWantedPosition a (%.2f, %.2f, %.2f)%n", x, y, z);
 
         // 👇 2. Inicia la navegación
         boolean success = entity.getNavigation().moveTo(this.x, this.y, this.z, 1.0);
 
         // 👇 ✅ AQUI va la verificación #4
+        /*
         System.out.printf(
                 "[DEBUG] moveTo éxito: %s, isDone(): %s, isInProgress(): %s, actualPos: (%.2f, %.2f, %.2f)%n",
                 success,
@@ -80,11 +81,11 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
                 entity.getNavigation().isInProgress(),
                 entity.getX(), entity.getY(), entity.getZ()
         );
-
+         */
         if (success) {
-            System.out.printf("[WANDER] Movimiento iniciado a (%.2f, %.2f, %.2f)%n", x, y, z);
+            //System.out.printf("[WANDER] Movimiento iniciado a (%.2f, %.2f, %.2f)%n", x, y, z);
         } else {
-            System.out.println("[WANDER] Falló el movimiento: path inválido.");
+            //System.out.println("[WANDER] Falló el movimiento: path inválido.");
         }
     }
 
@@ -92,7 +93,7 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
     public boolean canContinueToUse() {
         boolean result = !entity.getNavigation().isDone() && entity.distanceToSqr(x, y, z) > 9;
         if (!result) {
-            System.out.println("[WANDER] Deteniendo uso. Path terminado o cerca.");
+            //System.out.println("[WANDER] Deteniendo uso. Path terminado o cerca.");
         }
         return result;
     }
@@ -107,7 +108,7 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
         }
 
         if (this.wantsToStand && down <= 2) {
-            System.out.println("[WANDER] Entrando en modo standing.");
+            //System.out.println("[WANDER] Entrando en modo standing.");
             entity.setStanding(true);
             entity.getNavigation().stop();
             entity.setDeltaMovement(Vec3.ZERO);
@@ -119,7 +120,7 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
         BlockPos water = findWaterBlock();
         if (entity.isInWaterOrBubble()) {
             if (water == null) {
-                System.out.println("[WANDER] No se encontró bloque de agua.");
+                //System.out.println("[WANDER] No se encontró bloque de agua.");
                 return null;
             }
 
@@ -129,7 +130,7 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
 
             BlockState floor = entity.level().getBlockState(water.below());
             if (wantsToStand && (floor.is(Blocks.MAGMA_BLOCK) || (!floor.getFluidState().isEmpty() && !floor.getFluidState().is(FluidTags.WATER)))) {
-                System.out.println("[WANDER] Piso inválido para standing.");
+                //System.out.println("[WANDER] Piso inválido para standing.");
                 return null;
             }
 
@@ -140,14 +141,14 @@ public class WaterWanderGoal<T extends WaterEntity> extends Goal {
 
             Vec3 vec3 = Vec3.atCenterOf(above);
             if (isTargetBlocked(vec3)) {
-                System.out.println("[WANDER] Camino bloqueado por colisión.");
+                //System.out.println("[WANDER] Camino bloqueado por colisión.");
                 return null;
             }
 
             return vec3;
         } else {
             if (water == null) {
-                System.out.println("[WANDER] No hay agua cercana fuera del agua.");
+                //System.out.println("[WANDER] No hay agua cercana fuera del agua.");
                 return null;
             }
             return Vec3.atCenterOf(water);

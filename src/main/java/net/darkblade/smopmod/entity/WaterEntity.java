@@ -1,18 +1,27 @@
 package net.darkblade.smopmod.entity;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
 
 public abstract class WaterEntity extends GenderedEntity {
 
@@ -71,7 +80,7 @@ public abstract class WaterEntity extends GenderedEntity {
                 hasStandingSize = true;
                 refreshDimensions();
                 navigateTypeLength = 400 + random.nextInt(400);
-                System.out.printf("[TICK] Entrando en modo STANDING en (%.2f, %.2f, %.2f)%n", this.getX(), this.getY(), this.getZ());
+                //System.out.printf("[TICK] Entrando en modo STANDING en (%.2f, %.2f, %.2f)%n", this.getX(), this.getY(), this.getZ());
             }
 
             timeStanding++;
@@ -80,9 +89,9 @@ public abstract class WaterEntity extends GenderedEntity {
 
             if (this.getNavigation().isDone()) {
                 this.getNavigation().stop();
-                System.out.printf("[TICK] STANDING sin navegación → deteniendo en (%.2f, %.2f, %.2f)%n",
-                        this.getX(), this.getY(), this.getZ()
-                );
+                //System.out.printf("[TICK] STANDING sin navegación → deteniendo en (%.2f, %.2f, %.2f)%n",
+                //        this.getX(), this.getY(), this.getZ()
+                //);
                 if (!this.onGround()) {
                     this.setDeltaMovement(motion.add(0, -0.05, 0).multiply(0.5F, 1F, 0.5F));
                 }
@@ -90,8 +99,8 @@ public abstract class WaterEntity extends GenderedEntity {
 
         } else {
             if (hasStandingSize) {
-                System.out.printf("[TICK] Saliendo de STANDING → reanudando nado desde (%.2f, %.2f, %.2f)%n",
-                        this.getX(), this.getY(), this.getZ());
+                //System.out.printf("[TICK] Saliendo de STANDING → reanudando nado desde (%.2f, %.2f, %.2f)%n",
+                //        this.getX(), this.getY(), this.getZ());
             }
 
             timeStanding = 0;
@@ -105,9 +114,9 @@ public abstract class WaterEntity extends GenderedEntity {
                 navigateTypeLength = 400 + random.nextInt(400);
             }
 
-            System.out.printf("[TICK] NADANDO → posición (%.2f, %.2f, %.2f), delta: (%.3f, %.3f, %.3f)%n",
-                    this.getX(), this.getY(), this.getZ(),
-                    motion.x, motion.y, motion.z);
+            //System.out.printf("[TICK] NADANDO → posición (%.2f, %.2f, %.2f), delta: (%.3f, %.3f, %.3f)%n",
+            //        this.getX(), this.getY(), this.getZ(),
+            //        motion.x, motion.y, motion.z);
         }
 
         // ─── Inclinación vertical del pez ───────────────────────
@@ -142,7 +151,7 @@ public abstract class WaterEntity extends GenderedEntity {
 
         // ─── Depuración adicional opcional ────────────────────
         if (!this.getNavigation().isDone()) {
-            System.out.printf("[TICK] Navegando hacia destino, velocidad actual: %.3f%n", motion.length());
+        //    System.out.printf("[TICK] Navegando hacia destino, velocidad actual: %.3f%n", motion.length());
         }
     }
 
@@ -265,4 +274,38 @@ public abstract class WaterEntity extends GenderedEntity {
         super.defineSynchedData();
         this.entityData.define(STANDING, false);
     }
+
+    @Override
+    public @Nullable BlockPos tryLayEgg(Block eggBlock) {
+        if (!this.hasEgg() || this.isMammal()) {
+            System.out.println("[DEBUG] No se colocará huevo: hasEgg=" + this.hasEgg() + ", isMammal=" + this.isMammal());
+            return null;
+        }
+
+        BlockPos pos = this.blockPosition();
+        Level level = this.level();
+
+        FluidState fluid = level.getFluidState(pos);
+        BlockState below = level.getBlockState(pos.below());
+        BlockState current = level.getBlockState(pos);
+
+        boolean isWaterSource = fluid.is(FluidTags.WATER) && fluid.getAmount() == 8;
+        boolean hasSolidBelow = below.isFaceSturdy(level, pos.below(), Direction.UP);
+        boolean isReplaceable = current.canBeReplaced();
+
+        System.out.println("[DEBUG] Intentando colocar huevo en " + pos);
+        System.out.println("[DEBUG] isWaterSource=" + isWaterSource + ", hasSolidBelow=" + hasSolidBelow + ", isReplaceable=" + isReplaceable);
+
+        if (isWaterSource && hasSolidBelow && isReplaceable) {
+            level.setBlock(pos, eggBlock.defaultBlockState(), 3);
+            level.playSound(null, pos, SoundEvents.TURTLE_LAY_EGG, SoundSource.BLOCKS, 1.0F, 1.0F);
+            this.setHasEgg(false);
+            System.out.println("[DEBUG] ¡Huevo colocado exitosamente!");
+            return pos;
+        }
+
+        System.out.println("[DEBUG] Falló colocación de huevo.");
+        return null;
+    }
+
 }

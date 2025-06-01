@@ -25,15 +25,15 @@ public class VerticalSwimmingMoveControl extends MoveControl {
         // 🛠️ Forzar desactivar la gravedad para permitir movimiento vertical libre
         this.mob.setNoGravity(true);
 
-        System.out.printf("[MOVE] Tick ejecutado. Operation: %s, Navigation isDone: %s%n",
-                this.operation, this.mob.getNavigation().isDone());
+        //System.out.printf("[MOVE] Tick ejecutado. Operation: %s, Navigation isDone: %s%n",
+        //        this.operation, this.mob.getNavigation().isDone());
 
         if (this.operation == Operation.MOVE_TO && !this.mob.getNavigation().isDone()) {
             Vec3 ed = this.mob.getNavigation().getTargetPos().getCenter();
 
             // Depuración visual
-            ((ServerLevel) mob.level()).sendParticles(ParticleTypes.HEART, ed.x, ed.y, ed.z, 0, 0, 0, 0, 1);
-            ((ServerLevel) mob.level()).sendParticles(ParticleTypes.SNEEZE, wantedX, wantedY, wantedZ, 0, 0, 0, 0, 1);
+            //((ServerLevel) mob.level()).sendParticles(ParticleTypes.HEART, ed.x, ed.y, ed.z, 0, 0, 0, 0, 1);
+            //((ServerLevel) mob.level()).sendParticles(ParticleTypes.SNEEZE, wantedX, wantedY, wantedZ, 0, 0, 0, 0, 1);
 
             double d0 = this.wantedX - this.mob.getX();
             double d1 = this.wantedY - this.mob.getY();
@@ -66,7 +66,7 @@ public class VerticalSwimmingMoveControl extends MoveControl {
             // 🎯 Movimiento en todas las direcciones, normalizado
             Vec3 movement = new Vec3(d0 / d3 * f1, d1 / d3 * f1, d2 / d3 * f1);
             this.mob.setDeltaMovement(movement);
-            System.out.printf("[MOVE] Aplicando deltaMove (%.3f, %.3f, %.3f)%n", movement.x, movement.y, movement.z);
+            //System.out.printf("[MOVE] Aplicando deltaMove (%.3f, %.3f, %.3f)%n", movement.x, movement.y, movement.z);
 
             // 🔄 Rotación horizontal
             float f = (float) (Mth.atan2(d2, d0) * 57.2957763671875D) - 90.0F;
@@ -76,8 +76,8 @@ public class VerticalSwimmingMoveControl extends MoveControl {
             this.mob.yBodyRot = newYRot;
 
             float deltaRot = Mth.degreesDifferenceAbs(currentYRot, newYRot);
-            System.out.printf("[ROT] Deseado: %.2f°, Antes: %.2f°, Después: %.2f°, Aplicado: %.2f°, Máx permitido: %.2f°%n",
-                    f, currentYRot, newYRot, deltaRot, rotBy);
+            //System.out.printf("[ROT] Deseado: %.2f°, Antes: %.2f°, Después: %.2f°, Aplicado: %.2f°, Máx permitido: %.2f°%n",
+            //        f, currentYRot, newYRot, deltaRot, rotBy);
 
             this.mob.setSpeed(f1);
         } else {

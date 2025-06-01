@@ -20,7 +20,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.phys.shapes.VoxelShape;
 
 
 import java.util.function.Supplier;
@@ -32,8 +31,6 @@ public class RoeEggsBlock extends Block {
     private final int hatchDelayMin;
     private final int hatchDelayMax;
     private final SoundEvent hatchSound;
-
-    protected static final VoxelShape SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 1.5, 16.0);
 
     public RoeEggsBlock(Supplier<? extends EntityType<? extends LivingEntity>> entityTypeSupplier,
                         int minSpawn, int maxSpawn,
