@@ -36,6 +36,7 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
 
     protected BaseEntity(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
+        this.sleepController = createSleepController();
     }
 
     @Override

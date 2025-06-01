@@ -11,6 +11,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
@@ -51,8 +52,15 @@ public class RoeEggsBlock extends Block {
     // ✅ Permitir colocación dentro de agua fuente
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        FluidState fluid = context.getLevel().getFluidState(context.getClickedPos());
-        return fluid.is(FluidTags.WATER) && fluid.getAmount() == 8 ? this.defaultBlockState() : null;
+        BlockGetter level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        FluidState fluid = level.getFluidState(pos);
+        BlockState below = level.getBlockState(pos.below());
+
+        boolean isInWaterSource = fluid.is(FluidTags.WATER) && fluid.getAmount() == 8;
+        boolean hasSolidBelow = below.isFaceSturdy(level, pos.below(), Direction.UP);
+
+        return (isInWaterSource && hasSolidBelow) ? this.defaultBlockState() : null;
     }
 
     @Override
@@ -81,8 +89,13 @@ public class RoeEggsBlock extends Block {
     @Override
     public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         FluidState fluid = level.getFluidState(pos);
-        return fluid.getType() == Fluids.WATER && fluid.isSource();
+        BlockState below = level.getBlockState(pos.below());
+
+        return fluid.getType() == Fluids.WATER
+                && fluid.isSource()
+                && below.isFaceSturdy(level, pos.below(), Direction.UP);
     }
+
 
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {

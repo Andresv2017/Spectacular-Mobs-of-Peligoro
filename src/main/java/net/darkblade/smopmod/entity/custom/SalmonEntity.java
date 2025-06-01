@@ -1,5 +1,6 @@
 package net.darkblade.smopmod.entity.custom;
 
+import net.darkblade.smopmod.entity.BaseEntity;
 import net.darkblade.smopmod.entity.WaterEntity;
 import net.darkblade.smopmod.entity.ai.core.water.WaterWanderGoal;
 import net.darkblade.smopmod.entity.ai.salmon.SalmonAttackGoal;
@@ -7,6 +8,7 @@ import net.darkblade.smopmod.entity.ai.salmon.SalmonDigGoal;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepThreatEvaluator;
 import net.darkblade.smopmod.entity.movecontrols.VerticalSwimmingMoveControl;
+import net.darkblade.smopmod.entity.util.SleepCycleController;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -112,6 +114,12 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(ATTACKING, false);
+    }
+
+    @Override
+    protected SleepCycleController<BaseEntity> createSleepController() {
+        return new SleepCycleController<>(this, preparingSleepState, sleepState, awakeningState,
+                getPreparingSleepDuration(), getAwakeningDuration());
     }
 
     @Override
