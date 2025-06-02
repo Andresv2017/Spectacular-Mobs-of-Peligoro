@@ -166,6 +166,10 @@ public class KriftognathusModel<T extends KriftognathusEntity> extends Hierarchi
         this.animate(entity.getIdleAnimationState(), KriftoAnimations.lidle, ageInTicks, 1f);
         this.animate(entity.getWaterIdleAnimationState(), KriftoAnimations.swim, ageInTicks, 1f);
 
+        // Flying Animations
+        this.animate(entity.getFlyIdleAnimationState(), KriftoAnimations.aidle, ageInTicks, 1f);
+        this.animate(entity.getFlyMoveAnimationState(), KriftoAnimations.flight, ageInTicks, 1f);
+
         // Independent Animations
         this.animate(entity.attackAnimationState, KriftoAnimations.attack, ageInTicks, 1f);
 

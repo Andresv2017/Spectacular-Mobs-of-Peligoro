@@ -51,7 +51,7 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             this.updateSprintStatus();
         }
         if (this.level().isClientSide()) {
-            this.updateBaseAnimations();
+            this.updateAnimations();
         }
         if (isOrderedToSit()) {
             getNavigation().stop();
@@ -219,6 +219,7 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             walkAnimationState.stop();
             sprintAnimationState.stop();
             idleAnimationState.stop();
+            System.out.println("[ANIM BASE] Está durmiendo. Se detienen animaciones base.");
             return;
         }
 
@@ -229,16 +230,17 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
 
             if (!(this instanceof WaterEntity) && !deathAnimationState.isStarted()) {
                 deathAnimationState.start(this.tickCount);
-                System.out.println("[ANIM] Ejecutando Death Por Defecto " + this.tickCount);
+                System.out.println("[ANIM BASE] Animación de muerte por defecto iniciada. Tick: " + this.tickCount);
+            } else {
+                System.out.println("[ANIM BASE] Entidad muerta. Se detienen animaciones base.");
             }
-
             return;
         }
 
-        // 🔹 Animación especial para agua (default: siempre en agua)
         if (shouldPlayWaterIdleAnimation()) {
             if (!waterIdleAnimationState.isStarted()) {
                 waterIdleAnimationState.start(this.tickCount);
+                System.out.println("[ANIM BASE] Animación acuática iniciada: 'water_idle'.");
             }
             walkAnimationState.stop();
             sprintAnimationState.stop();
@@ -252,12 +254,14 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
             if (this.isSprinting()) {
                 if (!sprintAnimationState.isStarted()) {
                     sprintAnimationState.start(this.tickCount);
+                    System.out.println("[ANIM BASE] Sprint detectado. Inicia animación: 'sprint'.");
                 }
                 walkAnimationState.stop();
                 idleAnimationState.stop();
             } else {
                 if (!walkAnimationState.isStarted()) {
                     walkAnimationState.start(this.tickCount);
+                    System.out.println("[ANIM BASE] Movimiento detectado. Inicia animación: 'walk'.");
                 }
                 sprintAnimationState.stop();
                 idleAnimationState.stop();
@@ -265,10 +269,12 @@ public abstract class BaseEntity extends TamableAnimal implements ISleepingEntit
         } else {
             if (!idleAnimationState.isStarted()) {
                 idleAnimationState.start(this.tickCount);
+                System.out.println("[ANIM BASE] Quieto. Inicia animación: 'idle'.");
             }
             walkAnimationState.stop();
             sprintAnimationState.stop();
         }
+
         waterIdleAnimationState.stop();
     }
 

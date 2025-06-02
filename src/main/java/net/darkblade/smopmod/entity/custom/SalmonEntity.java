@@ -257,7 +257,6 @@ public class SalmonEntity extends WaterEntity implements ISleepThreatEvaluator, 
         }
     }
 
-
     private static final float SWIM_SPEED_MODIFIER = 0.65f;
     private static final float MAX_ROT_CHANGE = 70.0f;
 

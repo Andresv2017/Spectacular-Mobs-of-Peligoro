@@ -12,6 +12,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.TamableAnimal;
@@ -86,8 +87,6 @@ public class FlyingEntity extends GenderedEntity{
         if (!level().isClientSide()) {
             InitPackets.sendToAll(new StoCSyncFlying(this.getId(), this.getIsFlying()));
         }
-
-        System.out.println("[NAV] Cambio de navegación: " + (wasFlying ? "Vuelo → Tierra" : "Tierra → Vuelo"));
     }
 
 
@@ -132,6 +131,7 @@ public class FlyingEntity extends GenderedEntity{
 
                     if (groundedWhileFlyingTicks >= maxGroundedTicksWhileFlying()) {
                         System.out.println("[NAV] Fuerza aterrizaje tras " + groundedWhileFlyingTicks + " ticks en el suelo.");
+
                         switchNavigation();
                         resetTimers();
                         return;
@@ -169,7 +169,12 @@ public class FlyingEntity extends GenderedEntity{
                 }
             }
         }
+
+        this.updateAnimations();
     }
+
+
+
 
     // ===== MÉTODO AUXILIAR PARA LIMPIAR CONTADORES =====
 
@@ -213,5 +218,114 @@ public class FlyingEntity extends GenderedEntity{
     @Override
     public Set<EntityType<?>> getInterruptingEntityTypes() {
         return Set.of();
+    }
+
+    // ───────────────────────────────────────────────────── ANIMATIONS ─────
+
+    protected final AnimationState flyIdleAnimationState = new AnimationState();
+    protected final AnimationState flyMoveAnimationState = new AnimationState();
+
+    public AnimationState getFlyIdleAnimationState() { return flyIdleAnimationState; }
+    public AnimationState getFlyMoveAnimationState() { return flyMoveAnimationState; }
+
+    @Override
+    public void updateAnimations() {
+        updateFlyingAnimations();
+    }
+
+    protected void updateFlyingAnimations() {
+        if (isTouchingSolidGround()) {
+            stopAllFlightAnimations();
+            playGroundAnimations();
+            return;
+        }
+
+        stopAllGroundAnimations();
+
+        double speed = this.getDeltaMovement().horizontalDistanceSqr();
+
+        if (speed > 0.05) {
+            flyMoveAnimationState.startIfStopped(this.tickCount);
+            stopAllFlightAnimationsExcept(flyMoveAnimationState);
+            System.out.println("[ANIM FLYING] Volando y moviéndose. Inicia 'fly_move'.");
+        } else {
+            flyIdleAnimationState.startIfStopped(this.tickCount);
+            stopAllFlightAnimationsExcept(flyIdleAnimationState);
+            System.out.println("[ANIM FLYING] Volando quieto. Inicia 'fly_idle'.");
+        }
+    }
+
+    protected boolean shouldPlayWaterIdleAnimation() {
+        return this.isInWater();
+    }
+
+    protected void stopAllFlightAnimations() {
+        flyIdleAnimationState.stop();
+        flyMoveAnimationState.stop();
+    }
+
+    private void stopAllFlightAnimationsExcept(AnimationState active) {
+        if (active != flyIdleAnimationState) flyIdleAnimationState.stop();
+        if (active != flyMoveAnimationState) flyMoveAnimationState.stop();
+    }
+
+    protected void stopAllGroundAnimations() {
+        walkAnimationState.stop();
+        sprintAnimationState.stop();
+        idleAnimationState.stop();
+        waterIdleAnimationState.stop();
+    }
+
+    protected void playGroundAnimations() {
+        stopAllFlightAnimations(); // Limpieza por seguridad
+
+        if (shouldPlayWaterIdleAnimation()) {
+            if (!waterIdleAnimationState.isStarted()) {
+                waterIdleAnimationState.start(this.tickCount);
+                System.out.println("[ANIM GROUND] En agua. Inicia 'water_idle'.");
+            }
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
+            return;
+        }
+
+        if (!isTouchingSolidGround()) {
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
+            waterIdleAnimationState.stop();
+            System.out.println("[ANIM GROUND] No toca el suelo. Se detienen animaciones terrestres.");
+            return;
+        }
+
+        double speed = this.getDeltaMovement().horizontalDistanceSqr();
+
+        if (speed > 1.0E-6) {
+            if (this.isSprinting()) {
+                if (!sprintAnimationState.isStarted()) {
+                    sprintAnimationState.start(this.tickCount);
+                    System.out.println("[ANIM GROUND] Sprint detectado. Inicia 'sprint'.");
+                }
+                walkAnimationState.stop();
+                idleAnimationState.stop();
+            } else {
+                if (!walkAnimationState.isStarted()) {
+                    walkAnimationState.start(this.tickCount);
+                    System.out.println("[ANIM GROUND] Caminando. Inicia 'walk'.");
+                }
+                sprintAnimationState.stop();
+                idleAnimationState.stop();
+            }
+        } else {
+            if (!idleAnimationState.isStarted()) {
+                idleAnimationState.start(this.tickCount);
+                System.out.println("[ANIM GROUND] Quieto. Inicia 'idle'.");
+            }
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+        }
+
+        waterIdleAnimationState.stop();
     }
 }
