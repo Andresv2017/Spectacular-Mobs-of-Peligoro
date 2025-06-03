@@ -9,6 +9,8 @@ import net.darkblade.smopmod.entity.ai.core.flying.RandomStrollAndFlightGoal;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
 import net.darkblade.smopmod.entity.ai.krifto.KriftoAttackGoal;
+import net.darkblade.smopmod.entity.ai.krifto.RunAwayAfterStealGoal;
+import net.darkblade.smopmod.entity.ai.krifto.StealItemGoal;
 import net.darkblade.smopmod.entity.interfaces.egg_custom.CustomEggBorn;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepThreatEvaluator;
@@ -37,6 +39,7 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -70,6 +73,7 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
         if (this.level().isClientSide()) {
             this.updateAnimations();
         }
+        tickLootBehavior();
     }
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -78,16 +82,24 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
 
 
     @Override
-    public void updateBaseAnimations() {
-        super.updateBaseAnimations();
+    public void updateAnimations() {
+        super.updateAnimations();
+
+        // Animación de ataque (por AnimationState)
         if (this.isAttacking() && attackAnimationTimeout <= 0) {
-            attackAnimationTimeout = 15; // Length in ticks of your animation
+            attackAnimationTimeout = 8;
             attackAnimationState.start(this.tickCount);
         } else {
             --this.attackAnimationTimeout;
         }
+
         if (!this.isAttacking()) {
             attackAnimationState.stop();
+        }
+
+        if (swoopAnimationState.isStarted() && swoopAnimationState.getAccumulatedTime() > 1600) {
+            swoopAnimationState.stop();
+            System.out.println("[ANIM] swoop terminado automáticamente (duración > 750ms)");
         }
     }
 
@@ -115,9 +127,11 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
                 PREY_SELECTOR,
                 5// Prioridad base del goal
         );
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(6, new StealItemGoal(this, 15.0D, 10));
+        this.goalSelector.addGoal(7, new RunAwayAfterStealGoal(this, 1.0D));
+        this.goalSelector.addGoal(8, new WaterAvoidingRandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(10, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
     }
@@ -325,4 +339,83 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
         // (Optional) Debug message
         System.out.println("[BiomeTexture] Asignado: " + biomePath + " para entidad ID: " + this.getId());
     }
+
+    // ───────────────────────────────────────────────────── Steal Goal ─────
+
+    private ItemStack heldLoot = ItemStack.EMPTY;
+    private int lootTicks = 0;
+    private boolean holdingLoot = false;
+
+    public void setHeldLoot(ItemStack stack) {
+        this.heldLoot = stack;
+        this.lootTicks = 0;
+    }
+
+    public ItemStack getHeldLoot() {
+        return this.heldLoot;
+    }
+
+    public void setHoldingLoot(boolean value) {
+        this.holdingLoot = value;
+    }
+
+    public boolean isHoldingLoot() {
+        return this.holdingLoot && !this.heldLoot.isEmpty();
+    }
+
+    public void tickLootBehavior() {
+        if (!isHoldingLoot()) {
+            // Verifica si está volando demasiado alto después de terminar
+            if (getIsFlying()) {
+                int dist = distanceToGround();
+                if (dist > 5) {
+                    this.getNavigation().moveTo(getX(), getY() - 1.5, getZ(), 1.0);
+                    System.out.println("[Krifto] Bajando tras soltar/comer loot. Altura sobre suelo: " + dist);
+                }
+            }
+            return;
+        }
+
+        lootTicks++;
+
+        if (heldLoot.isEdible()) {
+            if (lootTicks >= 60) {
+                System.out.println("[Krifto] Ate stolen item: " + heldLoot.getDisplayName().getString());
+                heldLoot = ItemStack.EMPTY;
+                holdingLoot = false;
+            }
+        } else {
+            if (lootTicks >= 300) {
+                System.out.println("[Krifto] Dropped stolen item: " + heldLoot.getDisplayName().getString());
+                ItemEntity drop = new ItemEntity(level(), getX(), getY() + 0.5, getZ(), heldLoot);
+                drop.setPickUpDelay(40);
+                level().addFreshEntity(drop);
+                heldLoot = ItemStack.EMPTY;
+                holdingLoot = false;
+            }
+        }
+    }
+
+    public int distanceToGround() {
+        BlockPos pos = this.blockPosition();
+        Level level = this.level();
+
+        int distance = 0;
+        while (pos.getY() > level.getMinBuildHeight()) {
+            pos = pos.below();
+            distance++;
+
+            if (!level.getBlockState(pos).isAir()) {
+                return distance;
+            }
+        }
+        return distance;
+    }
+
+    public final AnimationState swoopAnimationState = new AnimationState();
+
+    public void playSwoopAnimation() {
+        swoopAnimationState.start(this.tickCount);
+    }
+
 }

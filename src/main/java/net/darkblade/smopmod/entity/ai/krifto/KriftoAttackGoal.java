@@ -23,8 +23,8 @@ public class KriftoAttackGoal extends MeleeAttackGoal {
     @Override
     public void start() {
         super.start();
-        attackDelay = 5;
-        ticksUntilNextAttack = 10;
+        attackDelay = 6;
+        ticksUntilNextAttack = 8;
         shouldCountTillNextAttack = false;
         startedAttackAnimation = false;
         entity.setAttacking(false);

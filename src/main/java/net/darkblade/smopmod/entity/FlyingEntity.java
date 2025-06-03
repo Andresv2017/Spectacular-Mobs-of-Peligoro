@@ -127,10 +127,10 @@ public class FlyingEntity extends GenderedEntity{
 
                 if (isTouching) {
                     groundedWhileFlyingTicks++;
-                    System.out.println("[NAV] Tocando suelo mientras vuela: " + groundedWhileFlyingTicks + " ticks.");
+                    //System.out.println("[NAV] Tocando suelo mientras vuela: " + groundedWhileFlyingTicks + " ticks.");
 
                     if (groundedWhileFlyingTicks >= maxGroundedTicksWhileFlying()) {
-                        System.out.println("[NAV] Fuerza aterrizaje tras " + groundedWhileFlyingTicks + " ticks en el suelo.");
+                        //System.out.println("[NAV] Fuerza aterrizaje tras " + groundedWhileFlyingTicks + " ticks en el suelo.");
 
                         switchNavigation();
                         resetTimers();
@@ -138,16 +138,16 @@ public class FlyingEntity extends GenderedEntity{
                     }
                 } else {
                     if (groundedWhileFlyingTicks > 0)
-                        System.out.println("[NAV] Dejó de tocar el suelo. Reiniciando contador de aterrizaje forzado.");
-                    groundedWhileFlyingTicks = 0;
-                }
+                        groundedWhileFlyingTicks = 0;
+                        //System.out.println("[NAV] Dejó de tocar el suelo. Reiniciando contador de aterrizaje forzado.");
+                    }
 
             } else {
                 groundedWhileFlyingTicks = 0;
                 groundTicks++;
 
                 if (groundTicks >= maxGroundTicks()) {
-                    System.out.println("[NAV] Ha caminado " + groundTicks + " ticks. Cambiando a navegación aérea.");
+                    //System.out.println("[NAV] Ha caminado " + groundTicks + " ticks. Cambiando a navegación aérea.");
                     switchNavigation();
                     resetTimers();
                     return;
@@ -159,7 +159,7 @@ public class FlyingEntity extends GenderedEntity{
                 prevTouchingGround = isTouching;
 
                 if (isTouching) {
-                    System.out.println("[PARTICLE DEBUG] Tocando suelo: " + this.blockPosition());
+                    //System.out.println("[PARTICLE DEBUG] Tocando suelo: " + this.blockPosition());
 
                     ((ServerLevel) level()).sendParticles(
                             ParticleTypes.HEART,
@@ -247,11 +247,11 @@ public class FlyingEntity extends GenderedEntity{
         if (speed > 0.05) {
             flyMoveAnimationState.startIfStopped(this.tickCount);
             stopAllFlightAnimationsExcept(flyMoveAnimationState);
-            System.out.println("[ANIM FLYING] Volando y moviéndose. Inicia 'fly_move'.");
+            //System.out.println("[ANIM FLYING] Volando y moviéndose. Inicia 'fly_move'.");
         } else {
             flyIdleAnimationState.startIfStopped(this.tickCount);
             stopAllFlightAnimationsExcept(flyIdleAnimationState);
-            System.out.println("[ANIM FLYING] Volando quieto. Inicia 'fly_idle'.");
+            //System.out.println("[ANIM FLYING] Volando quieto. Inicia 'fly_idle'.");
         }
     }
 
@@ -282,7 +282,7 @@ public class FlyingEntity extends GenderedEntity{
         if (shouldPlayWaterIdleAnimation()) {
             if (!waterIdleAnimationState.isStarted()) {
                 waterIdleAnimationState.start(this.tickCount);
-                System.out.println("[ANIM GROUND] En agua. Inicia 'water_idle'.");
+                //System.out.println("[ANIM GROUND] En agua. Inicia 'water_idle'.");
             }
             walkAnimationState.stop();
             sprintAnimationState.stop();
@@ -295,7 +295,7 @@ public class FlyingEntity extends GenderedEntity{
             sprintAnimationState.stop();
             idleAnimationState.stop();
             waterIdleAnimationState.stop();
-            System.out.println("[ANIM GROUND] No toca el suelo. Se detienen animaciones terrestres.");
+            //System.out.println("[ANIM GROUND] No toca el suelo. Se detienen animaciones terrestres.");
             return;
         }
 
@@ -305,14 +305,14 @@ public class FlyingEntity extends GenderedEntity{
             if (this.isSprinting()) {
                 if (!sprintAnimationState.isStarted()) {
                     sprintAnimationState.start(this.tickCount);
-                    System.out.println("[ANIM GROUND] Sprint detectado. Inicia 'sprint'.");
+                    //System.out.println("[ANIM GROUND] Sprint detectado. Inicia 'sprint'.");
                 }
                 walkAnimationState.stop();
                 idleAnimationState.stop();
             } else {
                 if (!walkAnimationState.isStarted()) {
                     walkAnimationState.start(this.tickCount);
-                    System.out.println("[ANIM GROUND] Caminando. Inicia 'walk'.");
+                    //System.out.println("[ANIM GROUND] Caminando. Inicia 'walk'.");
                 }
                 sprintAnimationState.stop();
                 idleAnimationState.stop();
@@ -320,7 +320,7 @@ public class FlyingEntity extends GenderedEntity{
         } else {
             if (!idleAnimationState.isStarted()) {
                 idleAnimationState.start(this.tickCount);
-                System.out.println("[ANIM GROUND] Quieto. Inicia 'idle'.");
+                //System.out.println("[ANIM GROUND] Quieto. Inicia 'idle'.");
             }
             walkAnimationState.stop();
             sprintAnimationState.stop();

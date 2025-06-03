@@ -172,6 +172,8 @@ public class KriftognathusModel<T extends KriftognathusEntity> extends Hierarchi
 
         // Independent Animations
         this.animate(entity.attackAnimationState, KriftoAnimations.attack, ageInTicks, 1f);
+        this.animate(entity.swoopAnimationState, KriftoAnimations.swoop, ageInTicks, 1f);
+
 
     }
 
