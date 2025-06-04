@@ -3,13 +3,16 @@ package net.darkblade.smopmod.entity.custom;
 import net.darkblade.smopmod.block.ModBlocks;
 import net.darkblade.smopmod.entity.BaseEntity;
 import net.darkblade.smopmod.entity.FlyingEntity;
+import net.darkblade.smopmod.entity.ai.core.FollowOwnerBaseGoal;
 import net.darkblade.smopmod.entity.ai.core.GenericBreedGoal;
 import net.darkblade.smopmod.entity.ai.core.flying.FlyFromNowAndThenGoal;
+import net.darkblade.smopmod.entity.ai.core.flying.FollowOwnerFlyingGoal;
 import net.darkblade.smopmod.entity.ai.core.flying.RandomStrollAndFlightGoal;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.EggGoalRegistry;
 import net.darkblade.smopmod.entity.ai.core.protect_egg.ProtectEggBaseGoal;
 import net.darkblade.smopmod.entity.ai.krifto.KriftoAttackGoal;
 import net.darkblade.smopmod.entity.ai.krifto.RunAwayAfterStealGoal;
+import net.darkblade.smopmod.entity.ai.krifto.SitOnHeadGoal;
 import net.darkblade.smopmod.entity.ai.krifto.StealItemGoal;
 import net.darkblade.smopmod.entity.interfaces.egg_custom.CustomEggBorn;
 import net.darkblade.smopmod.entity.interfaces.sleep_system.ISleepAwareness;
@@ -47,6 +50,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
@@ -56,7 +60,7 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
 
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<String> SPAWN_BIOME = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.STRING);
-
+    private static final EntityDataAccessor<Boolean> ON_PLAYERS_HEAD = SynchedEntityData.defineId(KriftognathusEntity.class, EntityDataSerializers.BOOLEAN);
 
     public KriftognathusEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
@@ -66,20 +70,53 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
 
     @Override
     public void tick() {
-        super.tick();
+        super.tick(); // sigue usando lógica general de BaseEntity/FlyingEntity
+
         if (sleepController == null) {
             sleepController = createSleepController();
         }
+
+        if (!level().isClientSide()) {
+            if (!this.isOnPlayersHead()) {
+                this.handleAutoNavigationSwitch(); // heredado de FlyingEntity
+            }
+        }
+
         if (this.level().isClientSide()) {
             this.updateAnimations();
         }
+
         tickLootBehavior();
+
+        if (this.isOnPlayersHead() && this.getOwner() instanceof Player player) {
+            if (player.isCrouching()) {
+                this.setOnPlayersHead(false);
+                this.setOrderedToSit(false);
+                this.setNoGravity(false);
+                return;
+            }
+
+            this.setPosRaw(player.getX(), player.getEyeY() + 0.05D, player.getZ());
+            this.setDeltaMovement(Vec3.ZERO);
+            this.setNoGravity(true);
+            this.fallDistance = 0.0F;
+            this.setOnGround(false);
+            this.getNavigation().stop();
+
+            float headYaw = player.getYHeadRot();
+            this.setYRot(headYaw);
+            this.setXRot(0);
+            this.yBodyRot = headYaw;
+            this.yHeadRot = headYaw;
+
+            this.setOrderedToSit(true);
+        }
     }
+
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
 
     public final AnimationState attackAnimationState = new AnimationState();
-
 
     @Override
     public void updateAnimations() {
@@ -97,10 +134,111 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
             attackAnimationState.stop();
         }
 
+        // Animación sobre la cabeza del jugador
+        if (this.isOnPlayersHead()) {
+            onHeadAnimationState.startIfStopped(this.tickCount);
+
+            // 🔒 Detener todas las demás animaciones activas
+            flyIdleAnimationState.stop();
+            flyMoveAnimationState.stop();
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
+            waterIdleAnimationState.stop();
+            return; // ya no se evalúan más animaciones
+        } else {
+            onHeadAnimationState.stop();
+        }
+
         if (swoopAnimationState.isStarted() && swoopAnimationState.getAccumulatedTime() > 1600) {
             swoopAnimationState.stop();
             System.out.println("[ANIM] swoop terminado automáticamente (duración > 750ms)");
         }
+    }
+
+    @Override
+    protected void updateFlyingAnimations() {
+        // Si está sobre la cabeza del jugador, detener animaciones de vuelo
+        if (this.isOnPlayersHead()) {
+            stopAllFlightAnimations();
+            return;
+        }
+
+        if (isTouchingSolidGround()) {
+            stopAllFlightAnimations();
+            playGroundAnimations();
+            return;
+        }
+
+        stopAllGroundAnimations();
+
+        double speed = this.getDeltaMovement().horizontalDistanceSqr();
+
+        if (speed > 0.05) {
+            flyMoveAnimationState.startIfStopped(this.tickCount);
+            stopAllFlightAnimationsExcept(flyMoveAnimationState);
+        } else {
+            flyIdleAnimationState.startIfStopped(this.tickCount);
+            stopAllFlightAnimationsExcept(flyIdleAnimationState);
+        }
+    }
+
+    @Override
+    protected void playGroundAnimations() {
+        stopAllFlightAnimations(); // Limpieza por seguridad
+
+        // 🔒 Si está en la cabeza del jugador, solo se ejecuta on_head
+        if (this.isOnPlayersHead()) {
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
+            waterIdleAnimationState.stop();
+            return;
+        }
+
+        if (shouldPlayWaterIdleAnimation()) {
+            if (!waterIdleAnimationState.isStarted()) {
+                waterIdleAnimationState.start(this.tickCount);
+            }
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
+            return;
+        }
+
+        if (!isTouchingSolidGround()) {
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+            idleAnimationState.stop();
+            waterIdleAnimationState.stop();
+            return;
+        }
+
+        double speed = this.getDeltaMovement().horizontalDistanceSqr();
+
+        if (speed > 1.0E-6) {
+            if (this.isSprinting()) {
+                if (!sprintAnimationState.isStarted()) {
+                    sprintAnimationState.start(this.tickCount);
+                }
+                walkAnimationState.stop();
+                idleAnimationState.stop();
+            } else {
+                if (!walkAnimationState.isStarted()) {
+                    walkAnimationState.start(this.tickCount);
+                }
+                sprintAnimationState.stop();
+                idleAnimationState.stop();
+            }
+        } else {
+            if (!idleAnimationState.isStarted()) {
+                idleAnimationState.start(this.tickCount);
+            }
+            walkAnimationState.stop();
+            sprintAnimationState.stop();
+        }
+
+        waterIdleAnimationState.stop();
     }
 
     // ───────────────────────────────────────────────────── GOALS ─────
@@ -115,9 +253,11 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
         this.goalSelector.addGoal(0, new FloatGoal(this));
 
         this.goalSelector.addGoal(1, new KriftoAttackGoal(this, 1.0D, true));
+        this.goalSelector.addGoal(2, new FollowOwnerFlyingGoal(this, 1.2D, 6.0F, 2.0F));
         this.goalSelector.addGoal(2, new GenericBreedGoal<>(this, 1.0));
         this.goalSelector.addGoal(3, new RandomStrollAndFlightGoal(this, 1.0));
         this.goalSelector.addGoal(4, new FlyFromNowAndThenGoal(this));
+
         EggGoalRegistry.registerWithOwnGoal(
                 this,
                 ModBlocks.KRIFFO_EGG, // El bloque de huevo
@@ -125,13 +265,15 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
                 true, true, // attackOnApproach, attackOnBreak
                 ProtectEggBaseGoal.EggBreakReaction.IGNORE, // No huye si lo rompen
                 PREY_SELECTOR,
-                5// Prioridad base del goal
+                6// Prioridad base del goal
         );
-        this.goalSelector.addGoal(6, new StealItemGoal(this, 15.0D, 10));
-        this.goalSelector.addGoal(7, new RunAwayAfterStealGoal(this, 1.0D));
-        this.goalSelector.addGoal(8, new WaterAvoidingRandomStrollGoal(this, 1.1D));
-        this.goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 3f));
-        this.goalSelector.addGoal(10, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(7, new StealItemGoal(this, 15.0D, 10));
+        this.goalSelector.addGoal(8, new RunAwayAfterStealGoal(this, 1.0D));
+        this.goalSelector.addGoal(9, new WaterAvoidingRandomStrollGoal(this, 1.1D));
+        this.goalSelector.addGoal(10, new LookAtPlayerGoal(this, Player.class, 3f));
+        this.goalSelector.addGoal(11, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(12, new FollowOwnerBaseGoal(this, 1.0D, 10.0F, 2.0F, true, false));
+
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
     }
@@ -155,23 +297,29 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
         ItemStack stack = player.getItemInHand(hand);
         Item item = stack.getItem();
 
+        // ✅ Prioridad: interacción por shift (stay/wander/sit)
+        if (this.isTame() && this.isOwnedBy(player) && player.isShiftKeyDown()) {
+            return super.mobInteract(player, hand); // delega al BaseEntity
+        }
+
+        // ✅ Tameo
         if (item == TAMING_ITEM && !this.isTame()) {
             if (!player.level().isClientSide) {
                 if (!player.getAbilities().instabuild) {
                     stack.shrink(1);
                 }
 
-                if (this.random.nextInt(3) == 0) { // 1 en 3 chance
+                if (this.random.nextInt(3) == 0) {
                     this.tame(player);
-                    this.level().broadcastEntityEvent(this, (byte) 7); // ❤️ corazones
+                    this.level().broadcastEntityEvent(this, (byte) 7); // ❤️
                 } else {
-                    this.level().broadcastEntityEvent(this, (byte) 6); // 💨 humo (fallo)
+                    this.level().broadcastEntityEvent(this, (byte) 6); // 💨
                 }
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
 
-
+        // ✅ Reproducción
         if (item == BREEDING_ITEM && !this.isBaby() && !this.isInLove()) {
             if (!player.level().isClientSide) {
                 this.setInLove(player);
@@ -181,6 +329,13 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
             }
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
+
+        // ✅ Montarse en la cabeza si es dueño
+        if (this.isTame() && this.isOwnedBy(player) && !this.isPassenger()) {
+            this.setOnPlayersHead(true);
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+
         return super.mobInteract(player, hand);
     }
 
@@ -201,6 +356,7 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
         super.defineSynchedData();
         this.entityData.define(ATTACKING,false);
         this.entityData.define(SPAWN_BIOME, "default");
+        this.entityData.define(ON_PLAYERS_HEAD, false);
     }
 
     // ───────────────────────────────────────────────────── Sounds ─────
@@ -284,6 +440,7 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
     public void addAdditionalSaveData(CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
         pCompound.putString("SpawnBiome", this.getSpawnBiomePath());
+        pCompound.putBoolean("OnPlayersHead", this.isOnPlayersHead());
     }
 
     @Override
@@ -293,6 +450,7 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
             String path = pCompound.getString("SpawnBiome");
             this.setSpawnBiomePath(path);
         }
+        this.setOnPlayersHead(pCompound.getBoolean("OnPlayersHead"));
     }
 
     public static boolean checkKriftoSpawnRules(EntityType<KriftognathusEntity> p_218242_, LevelAccessor p_218243_, MobSpawnType p_218244_, BlockPos p_218245_, RandomSource p_218246_) {
@@ -417,5 +575,43 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
     public void playSwoopAnimation() {
         swoopAnimationState.start(this.tickCount);
     }
+
+    // ───────────────────────────────────────────────────── Sit On Head ─────
+
+    public boolean isOnPlayersHead() {
+        return this.entityData.get(ON_PLAYERS_HEAD);
+    }
+
+    public void setOnPlayersHead(boolean value) {
+        this.entityData.set(ON_PLAYERS_HEAD, value);
+    }
+
+    @Override
+    public void stopRiding() {
+        super.stopRiding();
+        this.setOnPlayersHead(false);
+    }
+
+    public final AnimationState onHeadAnimationState = new AnimationState();
+
+    @Override
+    public void lookAt(Entity entity, float maxYawChange, float maxPitchChange) {
+        if (!this.isOnPlayersHead()) {
+            super.lookAt(entity, maxYawChange, maxPitchChange);
+        }
+    }
+
+    @Override
+    public boolean isPushable() {
+        return !this.isOnPlayersHead(); // solo colisiona si no está sobre el jugador
+    }
+
+    @Override
+    protected void doPush(Entity entity) {
+        if (!this.isOnPlayersHead()) {
+            super.doPush(entity);
+        }
+    }
+
 
 }

@@ -30,7 +30,7 @@ public class StealItemGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (thief.isBaby()) return false;
+        if (thief.isBaby() || thief.isTame()) return false;
 
         List<Player> players = thief.level().getEntitiesOfClass(Player.class,
                 thief.getBoundingBox().inflate(radius),
@@ -44,6 +44,7 @@ public class StealItemGoal extends Goal {
 
         return false;
     }
+
 
     @Override
     public void start() {
@@ -140,10 +141,15 @@ public class StealItemGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        boolean active = targetPlayer != null && targetPlayer.isAlive() && thief.distanceTo(targetPlayer) <= radius;
+        boolean active = !thief.isTame()
+                && targetPlayer != null
+                && targetPlayer.isAlive()
+                && thief.distanceTo(targetPlayer) <= radius;
+
         System.out.println("[STEAL_GOAL] Can continue? " + active);
         return active;
     }
+
 
     @Override
     public void stop() {

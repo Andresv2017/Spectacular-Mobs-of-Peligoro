@@ -19,6 +19,8 @@ public class RunAwayAfterStealGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (mob.isTame()) return false;
+
         boolean canUse = mob.isHoldingLoot();
         if (canUse) {
             System.out.println("[RUNAWAY_GOAL] Activado: mob tiene loot en memoria.");
@@ -55,8 +57,6 @@ public class RunAwayAfterStealGoal extends Goal {
         System.out.println("[RUNAWAY_GOAL] Ticks restantes de huida: " + fleeTicks);
 
         if (mob.getNavigation().isDone()) {
-
-            // Si ya no tiene loot, bajar si está muy alto sobre el suelo
             if (!mob.isHoldingLoot()) {
                 int distToGround = mob.distanceToGround();
                 if (distToGround > 5) {
@@ -78,7 +78,7 @@ public class RunAwayAfterStealGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        boolean cont = fleeTicks > 0 || mob.isHoldingLoot(); // sigue si aún está volando o cargando loot
+        boolean cont = !mob.isTame() && (fleeTicks > 0 || mob.isHoldingLoot());
         System.out.println("[RUNAWAY_GOAL] ¿Continuar?: " + cont);
         return cont;
     }
@@ -88,6 +88,4 @@ public class RunAwayAfterStealGoal extends Goal {
         mob.setAttacking(false);
         System.out.println("[RUNAWAY_GOAL] Huida finalizada. Reset de animación ataque.");
     }
-
-
 }

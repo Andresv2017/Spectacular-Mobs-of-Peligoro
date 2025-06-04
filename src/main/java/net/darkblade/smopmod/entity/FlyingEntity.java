@@ -30,6 +30,7 @@ public class FlyingEntity extends GenderedEntity{
     private static final EntityDataAccessor<Boolean> GOAL_WANT_FLYING = SynchedEntityData.defineId(FlyingEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> FLYING = SynchedEntityData.defineId(FlyingEntity.class, EntityDataSerializers.BOOLEAN);
 
+
     public void setGoalsRequireFlying(boolean b) { this.getEntityData().set(GOAL_WANT_FLYING, b); }
     public boolean getGoalsRequireFlying() { return this.getEntityData().get(GOAL_WANT_FLYING); }
 
@@ -111,69 +112,46 @@ public class FlyingEntity extends GenderedEntity{
 
     private int groundTicks = 0;
     private int groundedWhileFlyingTicks = 0;
-    private boolean prevTouchingGround = false;
 
     @Override
     public void tick() {
         super.tick();
 
         if (!level().isClientSide()) {
-            boolean isFlying = getIsFlying();
-            boolean isTouching = isTouchingSolidGround();
-
-            // --- CONTROL DE NAVEGACIÓN ---
-            if (isFlying) {
-                groundTicks = 0;
-
-                if (isTouching) {
-                    groundedWhileFlyingTicks++;
-                    //System.out.println("[NAV] Tocando suelo mientras vuela: " + groundedWhileFlyingTicks + " ticks.");
-
-                    if (groundedWhileFlyingTicks >= maxGroundedTicksWhileFlying()) {
-                        //System.out.println("[NAV] Fuerza aterrizaje tras " + groundedWhileFlyingTicks + " ticks en el suelo.");
-
-                        switchNavigation();
-                        resetTimers();
-                        return;
-                    }
-                } else {
-                    if (groundedWhileFlyingTicks > 0)
-                        groundedWhileFlyingTicks = 0;
-                        //System.out.println("[NAV] Dejó de tocar el suelo. Reiniciando contador de aterrizaje forzado.");
-                    }
-
-            } else {
-                groundedWhileFlyingTicks = 0;
-                groundTicks++;
-
-                if (groundTicks >= maxGroundTicks()) {
-                    //System.out.println("[NAV] Ha caminado " + groundTicks + " ticks. Cambiando a navegación aérea.");
-                    switchNavigation();
-                    resetTimers();
-                    return;
-                }
-            }
-
-            // --- PARTÍCULAS DEBUG DE SUELO ---
-            if (isTouching != prevTouchingGround) {
-                prevTouchingGround = isTouching;
-
-                if (isTouching) {
-                    //System.out.println("[PARTICLE DEBUG] Tocando suelo: " + this.blockPosition());
-
-                    ((ServerLevel) level()).sendParticles(
-                            ParticleTypes.HEART,
-                            getX(), getY(), getZ(),
-                            5, 0, 0, 0, 0.01
-                    );
-                }
-            }
+            this.handleAutoNavigationSwitch();
         }
 
         this.updateAnimations();
     }
 
+    protected void handleAutoNavigationSwitch() {
+        boolean isFlying = getIsFlying();
+        boolean isTouching = isTouchingSolidGround();
 
+        if (isFlying) {
+            groundTicks = 0;
+
+            if (isTouching) {
+                groundedWhileFlyingTicks++;
+                if (groundedWhileFlyingTicks >= maxGroundedTicksWhileFlying()) {
+                    switchNavigation();
+                    resetTimers();
+                }
+            } else {
+                if (groundedWhileFlyingTicks > 0)
+                    groundedWhileFlyingTicks = 0;
+            }
+
+        } else {
+            groundedWhileFlyingTicks = 0;
+            groundTicks++;
+
+            if (groundTicks >= maxGroundTicks()) {
+                switchNavigation();
+                resetTimers();
+            }
+        }
+    }
 
 
     // ===== MÉTODO AUXILIAR PARA LIMPIAR CONTADORES =====
@@ -182,7 +160,6 @@ public class FlyingEntity extends GenderedEntity{
         groundTicks = 0;
         groundedWhileFlyingTicks = 0;
     }
-
 
     @Override
     public void travel(@NotNull Vec3 vec) {
@@ -264,7 +241,7 @@ public class FlyingEntity extends GenderedEntity{
         flyMoveAnimationState.stop();
     }
 
-    private void stopAllFlightAnimationsExcept(AnimationState active) {
+    protected void stopAllFlightAnimationsExcept(AnimationState active) {
         if (active != flyIdleAnimationState) flyIdleAnimationState.stop();
         if (active != flyMoveAnimationState) flyMoveAnimationState.stop();
     }
