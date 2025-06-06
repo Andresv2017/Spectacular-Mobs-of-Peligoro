@@ -38,15 +38,15 @@ public class FollowOwnerFlyingGoal extends Goal {
     public boolean canUse() {
         LivingEntity owner = mob.getOwner();
         if (owner == null || mob.isOrderedToSit() || mob.isPassenger() || mob.isLeashed() || mob.isWandering()) {
-            System.out.println("[FOLLOW_GOAL] ❌ No se puede usar: sin dueño o está sentado/pasajero/en correa.");
+            //System.out.println("[FOLLOW_GOAL] ❌ No se puede usar: sin dueño o está sentado/pasajero/en correa.");
             return false;
         }
         if (mob.distanceToSqr(owner) < (startDistance * startDistance)) {
-            System.out.println("[FOLLOW_GOAL] 🟡 Muy cerca del dueño. No necesita seguirlo.");
+            //System.out.println("[FOLLOW_GOAL] 🟡 Muy cerca del dueño. No necesita seguirlo.");
             return false;
         }
         this.owner = owner;
-        System.out.println("[FOLLOW_GOAL] ✅ Activado. Siguiendo al dueño: " + owner.getName().getString());
+        //System.out.println("[FOLLOW_GOAL] ✅ Activado. Siguiendo al dueño: " + owner.getName().getString());
         return true;
     }
 
@@ -56,7 +56,7 @@ public class FollowOwnerFlyingGoal extends Goal {
                 && !mob.isOrderedToSit()
                 && !mob.isPassenger()
                 && mob.distanceToSqr(owner) > (stopDistance * stopDistance);
-        System.out.println("[FOLLOW_GOAL] ▶️ Continuar: " + result);
+        //System.out.println("[FOLLOW_GOAL] ▶️ Continuar: " + result);
         return result;
     }
 
@@ -64,7 +64,7 @@ public class FollowOwnerFlyingGoal extends Goal {
     public void start() {
         timeToRecalcPath = 0;
         mob.setFollowingOwner(true);
-        System.out.println("[FOLLOW_GOAL] 🚀 Comenzando seguimiento.");
+        //System.out.println("[FOLLOW_GOAL] 🚀 Comenzando seguimiento.");
     }
 
     @Override
@@ -72,7 +72,7 @@ public class FollowOwnerFlyingGoal extends Goal {
         owner = null;
         navigation.stop();
         mob.setFollowingOwner(false);
-        System.out.println("[FOLLOW_GOAL] ⛔ Detenido.");
+        //System.out.println("[FOLLOW_GOAL] ⛔ Detenido.");
     }
 
     @Override
@@ -83,10 +83,10 @@ public class FollowOwnerFlyingGoal extends Goal {
             timeToRecalcPath = adjustedTickDelay(10);
 
             double distance = mob.distanceTo(owner);
-            System.out.println("[FOLLOW_GOAL] 📏 Distancia al dueño: " + distance);
+            //System.out.println("[FOLLOW_GOAL] 📏 Distancia al dueño: " + distance);
 
             if (distance >= 12.0D) {
-                System.out.println("[FOLLOW_GOAL] 📦 Teletransportando: demasiado lejos.");
+                //System.out.println("[FOLLOW_GOAL] 📦 Teletransportando: demasiado lejos.");
                 teleportToOwner();
                 return;
             }
@@ -95,15 +95,15 @@ public class FollowOwnerFlyingGoal extends Goal {
                 mob.setIsFlying(true);
                 mob.switchNavigation();
                 this.navigation = mob.getNavigation();
-                System.out.println("[FOLLOW_GOAL] 🛫 Activando vuelo y cambiando navegación.");
+                ///System.out.println("[FOLLOW_GOAL] 🛫 Activando vuelo y cambiando navegación.");
             }
 
             // 💡 Basado en distancia real, no en targetPos
             if (!navigation.isInProgress() || distance > 2.5D) {
                 navigation.moveTo(owner, speedModifier);
-                System.out.println("[FOLLOW_GOAL] 🧭 (FORZADO) Moviéndose hacia el dueño.");
+                //System.out.println("[FOLLOW_GOAL] 🧭 (FORZADO) Moviéndose hacia el dueño.");
             } else {
-                System.out.println("[FOLLOW_GOAL] ⏳ Ruta actual no modificada.");
+                //System.out.println("[FOLLOW_GOAL] ⏳ Ruta actual no modificada.");
             }
         }
     }
@@ -124,7 +124,7 @@ public class FollowOwnerFlyingGoal extends Goal {
         if (!canTeleportTo(pos)) return false;
         mob.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, mob.getYRot(), mob.getXRot());
         navigation.stop();
-        System.out.println("[FOLLOW_GOAL] ✨ Teletransportado exitosamente.");
+        //System.out.println("[FOLLOW_GOAL] ✨ Teletransportado exitosamente.");
         return true;
     }
 

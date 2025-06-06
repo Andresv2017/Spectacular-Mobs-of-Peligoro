@@ -53,6 +53,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -65,6 +66,8 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
     public KriftognathusEntity(EntityType<? extends TamableAnimal> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
     }
+
+    public final AnimationState onHeadFallingAnimationState = new AnimationState();
 
     public int attackAnimationTimeout = 0;
 
@@ -93,6 +96,7 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
                 this.setOnPlayersHead(false);
                 this.setOrderedToSit(false);
                 this.setNoGravity(false);
+                stopOnHeadAnimations(); // 💡
                 return;
             }
 
@@ -110,8 +114,76 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
             this.yHeadRot = headYaw;
 
             this.setOrderedToSit(true);
+
+            // Efecto de caída retardada + animación de vuelo
+            Vec3 motion = player.getDeltaMovement();
+            boolean isFalling = motion.y < 0.0 && player.fallDistance > 0.0F && !player.onGround() && !player.isInWater();
+
+            if (isFalling) {
+                // Caída retardada tipo pollo
+                Vec3 newMotion = new Vec3(motion.x, Math.max(motion.y, -0.15), motion.z);
+                player.setDeltaMovement(newMotion);
+                player.fallDistance = 0.0F;
+
+                // Animación cayendo
+                playOnly(onHeadFallingAnimationState);
+                System.out.println("[KRIFTO ANIM] 🛫 on_head_falling");
+            } else {
+                // Animación quieto sobre la cabeza
+                playOnly(onHeadIdleAnimationState);
+                System.out.println("[KRIFTO ANIM] 🪶 on_head_idle");
+            }
+
+        }
+
+        if (!level().isClientSide()) {
+            System.out.print("[DEBUG ANIM HEAD] Activas: ");
+            if (onHeadIdleAnimationState.isStarted()) System.out.print("onHead ");
+            if (flyIdleAnimationState.isStarted()) System.out.print("flyIdle ");
+            if (flyMoveAnimationState.isStarted()) System.out.print("flyMove ");
+            if (walkAnimationState.isStarted()) System.out.print("walk ");
+            if (sprintAnimationState.isStarted()) System.out.print("sprint ");
+            if (idleAnimationState.isStarted()) System.out.print("idle ");
+            if (waterIdleAnimationState.isStarted()) System.out.print("waterIdle ");
+            if (attackAnimationState.isStarted()) System.out.print("attack ");
+            if (swoopAnimationState.isStarted()) System.out.print("swoop ");
+            System.out.println();
+        }
+
+    }
+
+    protected void playOnly(AnimationState stateToPlay) {
+        for (AnimationState state : List.of(
+                idleAnimationState,
+                walkAnimationState,
+                sprintAnimationState,
+                flyIdleAnimationState,
+                flyMoveAnimationState,
+                waterIdleAnimationState,
+                onHeadIdleAnimationState,
+                onHeadFallingAnimationState,
+                attackAnimationState,
+                swoopAnimationState
+        )) {
+            if (state != stateToPlay) {
+                if (state.isStarted()) {
+                    state.stop();
+                    System.out.println("[ANIM DEBUG] 🔴 Deteniendo: " + state);
+                }
+            }
+        }
+
+        if (!stateToPlay.isStarted()) {
+            stateToPlay.start(this.tickCount);
+            System.out.println("[ANIM DEBUG] 🟢 Reproduciendo: " + stateToPlay);
         }
     }
+
+    protected void stopOnHeadAnimations() {
+        onHeadIdleAnimationState.stop();
+        onHeadFallingAnimationState.stop();
+    }
+
 
 
     // ───────────────────────────────────────────────────── ANIMATIONS ─────
@@ -121,6 +193,11 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
     @Override
     public void updateAnimations() {
         super.updateAnimations();
+
+        // Animación sobre la cabeza del jugador
+        if (this.isOnPlayersHead()) {
+            return; // 🔒 Deja que tick() se encargue de las animaciones en la cabeza
+        }
 
         // Animación de ataque (por AnimationState)
         if (this.isAttacking() && attackAnimationTimeout <= 0) {
@@ -132,22 +209,6 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
 
         if (!this.isAttacking()) {
             attackAnimationState.stop();
-        }
-
-        // Animación sobre la cabeza del jugador
-        if (this.isOnPlayersHead()) {
-            onHeadAnimationState.startIfStopped(this.tickCount);
-
-            // 🔒 Detener todas las demás animaciones activas
-            flyIdleAnimationState.stop();
-            flyMoveAnimationState.stop();
-            walkAnimationState.stop();
-            sprintAnimationState.stop();
-            idleAnimationState.stop();
-            waterIdleAnimationState.stop();
-            return; // ya no se evalúan más animaciones
-        } else {
-            onHeadAnimationState.stop();
         }
 
         if (swoopAnimationState.isStarted() && swoopAnimationState.getAccumulatedTime() > 1600) {
@@ -590,9 +651,11 @@ public class KriftognathusEntity extends FlyingEntity implements ISleepThreatEva
     public void stopRiding() {
         super.stopRiding();
         this.setOnPlayersHead(false);
+        stopOnHeadAnimations();
     }
 
-    public final AnimationState onHeadAnimationState = new AnimationState();
+
+    public final AnimationState onHeadIdleAnimationState = new AnimationState();
 
     @Override
     public void lookAt(Entity entity, float maxYawChange, float maxPitchChange) {
